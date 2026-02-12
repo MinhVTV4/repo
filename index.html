@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gia Sư Lập Trình AI - Gemini API</title>
+    
+    <!-- Thư viện Marked.js, Highlight.js và GitHub Markdown CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css">
+
+    <style>
+        /* CSS Cơ Bản & Reset */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f6f8fa; /* Màu nền Github */
+            color: #24292f; 
+            display: flex;
+            height: 100vh; /* Sát lề, full màn hình */
+            overflow: hidden;
+        }
+
+        /* --- CỘT TRÁI (SIDEBAR / CONTROLS) --- */
+        #sidebar {
+            width: 360px;
+            background-color: #ffffff;
+            border-right: 1px solid #d0d7de;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            z-index: 100;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            flex-shrink: 0;
+        }
+        
+        .sidebar-header {
+            padding: 20px 20px 10px 20px;
+            border-bottom: 1px solid #eaeeef;
+        }
+        .sidebar-header h1 { 
+            color: #0969da; 
+            font-size: 1.25rem;
+            margin-bottom: 5px;
+        }
+        .sidebar-header h2 {
+            font-size: 0.85rem;
+            color: #57606a;
+            font-weight: normal;
+        }
+
+        #controls { 
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
+            flex-grow: 1;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #24292f;
+        }
+
+        .template-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+        .template-btn {
+            padding: 10px 15px;
+            background-color: #f6f8fa;
+            color: #24292f;
+            border: 1px solid #d0d7de;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        .template-btn:hover {
+            background-color: #f3f4f6;
+            border-color: #0969da;
+            color: #0969da;
+        }
+
+        textarea { 
+            width: 100%; 
+            padding: 12px; 
+            margin-bottom: 15px; 
+            border: 1px solid #d0d7de; 
+            border-radius: 6px; 
+            resize: vertical;
+            font-size: 14px;
+            font-family: inherit;
+            min-height: 120px;
+            background-color: #f6f8fa;
+        }
+        textarea:focus {
+            outline: none;
+            border-color: #0969da;
+            box-shadow: 0 0 0 3px rgba(9,105,218,0.3);
+            background-color: #fff;
+        }
+
+        button#sendPromptButton { 
+            padding: 12px; 
+            background-color: #2da44e; /* Màu xanh Github action */
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 15px;
+            font-weight: 600;
+            transition: background-color 0.2s;
+            display: flex; 
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+        }
+        button#sendPromptButton:hover { background-color: #2c974b; }
+        button#sendPromptButton:disabled { background-color: #94d3a2; cursor: not-allowed; }
+
+        /* --- TRẠNG THÁI (STATUS) --- */
+        .status-message {
+            margin-top: 15px;
+            font-size: 0.85rem;
+            text-align: center;
+            padding: 10px;
+            border-radius: 6px;
+            line-height: 1.4;
+        }
+        .status-message.error-text { background-color: #ffebe9; color: #cf222e; }
+        .status-message.success-text { background-color: #dafbe1; color: #1a7f37; }
+        .status-message.info-text { background-color: #ddf4ff; color: #0969da; }
+
+        /* --- CỘT PHẢI (MAIN CONTENT) --- */
+        #main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: relative;
+        }
+        
+        #responseContainer { 
+            padding: 40px; 
+            background-color: #fff; 
+            min-height: 100%; 
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto; /* Căn giữa nội dung văn bản */
+            box-shadow: 0 0 15px rgba(0,0,0,0.03);
+            transition: opacity 0.3s ease;
+        }
+        #responseContainer.loading {
+            opacity: 0.6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            color: #57606a;
+        }
+
+        .placeholder-text {
+            color: #57606a;
+            font-size: 1.1rem;
+            text-align: center;
+            margin-top: 20%;
+        }
+
+        /* --- SPINNER --- */
+        .spinner {
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-left-color: #fff;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            animation: spin 1s linear infinite;
+        }
+        .large-spinner {
+            width: 40px;
+            height: 40px;
+            border-width: 4px;
+            border-left-color: #0969da;
+            border-color: rgba(9, 105, 218, 0.2);
+            border-left-color: #0969da;
+            margin-bottom: 15px;
+        }
+        .hidden { display: none !important; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* --- MOBILE RESPONSIVE (SIDEBAR TRƯỢT) --- */
+        .mobile-header {
+            display: none;
+            align-items: center;
+            background-color: #24292f;
+            color: #fff;
+            padding: 12px 20px;
+            z-index: 101;
+        }
+        .mobile-header h1 {
+            font-size: 1.1rem;
+            margin-left: 15px;
+            font-weight: 600;
+        }
+        .hamburger-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        #sidebarOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 99;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        @media (max-width: 850px) {
+            body { flex-direction: column; }
+            .mobile-header { display: flex; }
+            
+            #sidebar {
+                position: fixed;
+                top: 0; bottom: 0; left: 0;
+                width: 320px;
+                transform: translateX(-100%);
+                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+            }
+            #sidebar.open { transform: translateX(0); }
+            
+            #sidebarOverlay.show {
+                display: block;
+                opacity: 1;
+            }
+
+            .sidebar-header { display: none; /* Ẩn header trái trên mobile do đã có thanh đen trên cùng */ }
+            
+            #main-content {
+                height: calc(100vh - 53px); /* Trừ đi height của mobile header */
+            }
+            #responseContainer { padding: 20px; }
+            .placeholder-text { margin-top: 30%; font-size: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header dành riêng cho Mobile -->
+    <div class="mobile-header">
+        <button class="hamburger-btn" id="menuToggle">☰</button>
+        <h1>Gia Sư Lập Trình AI</h1>
+    </div>
+
+    <!-- Lớp phủ màn mờ trên Mobile khi mở Sidebar -->
+    <div id="sidebarOverlay"></div>
+
+    <!-- CỘT TRÁI: Thanh công cụ -->
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h1>Gia Sư Lập Trình AI</h1>
+            <h2>Mô hình: gemini-2.5-flash</h2>
+        </div>
+        
+        <div id="controls">
+            <div class="section-title">Khung mẫu (Templates)</div>
+            <div class="template-buttons">
+                <button class="template-btn" onclick="setTemplate('explain')">📖 1. Giải thích Repo (Nhập môn)</button>
+                <button class="template-btn" onclick="setTemplate('tutor')">🎓 2. Dạy từng bước (Thực hành)</button>
+                <button class="template-btn" onclick="setTemplate('debug')">🐛 3. Sửa lỗi (Debug Terminal)</button>
+                <button class="template-btn" onclick="setTemplate('customize')">🛠️ 4. Tùy chỉnh Project</button>
+                <button class="template-btn" onclick="setTemplate('deploy')">🚀 5. Hướng dẫn Triển khai</button>
+            </div>
+            
+            <div class="section-title">Lời nhắc (Prompt)</div>
+            <textarea id="promptInput" placeholder="Nhấp vào các mẫu bên trên hoặc tự dán link GitHub / nhập câu hỏi của bạn vào đây..."></textarea>
+            
+            <button id="sendPromptButton">
+                <span id="buttonText">Gửi tới Gemini</span>
+                <div id="buttonSpinner" class="spinner hidden"></div>
+            </button>
+            
+            <p id="statusMessage" class="status-message"></p>
+        </div>
+    </div>
+    
+    <!-- CỘT PHẢI: Khung hiển thị nội dung -->
+    <div id="main-content">
+        <div id="responseContainer" class="markdown-body">
+            <div class="placeholder-text">
+                Xin chào! <br><br>Hãy dán một đường dẫn GitHub hoặc nhập lời nhắc ở cột bên trái để bắt đầu buổi học.
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+        import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-ai.js";
+
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBeliQXZDzIOyVVfnKdoKi-yTMgt33its",
+          authDomain: "test-f9b86.firebaseapp.com",
+          projectId: "test-f9b86",
+          storageBucket: "test-f9b86.firebasestorage.app",
+          messagingSenderId: "853017830675",
+          appId: "1:853017830675:web:b56ebdccc9219c596ba6e6"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        console.log("Firebase App initialized!");
+        
+        const promptInput = document.getElementById('promptInput');
+        const sendPromptButton = document.getElementById('sendPromptButton');
+        const buttonText = document.getElementById('buttonText');
+        const buttonSpinner = document.getElementById('buttonSpinner');
+        const responseContainer = document.getElementById('responseContainer');
+        const statusMessage = document.getElementById('statusMessage');
+
+        // Logic ẩn hiện Sidebar cho Mobile
+        const menuToggle = document.getElementById('menuToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+
+        function toggleSidebar() {
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('show');
+        }
+        menuToggle.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', toggleSidebar);
+
+        function updateStatus(type, message) {
+            statusMessage.className = `status-message ${type}`;
+            statusMessage.textContent = message;
+            if (type === 'info-text') {
+                statusMessage.innerHTML = message; // Cho phép thẻ <br> hoạt động
+            }
+        }
+
+        updateStatus('info-text', "Firebase App đã khởi tạo.<br>Đang chờ mô hình AI...");
+
+        // Cấu hình Marked.js tích hợp với Highlight.js để tô màu code
+        marked.setOptions({
+            highlight: function(code, lang) {
+                const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                return hljs.highlight(code, { language }).value;
+            },
+            langPrefix: 'hljs language-'
+        });
+
+        const systemPrompt = `You are an AI Technical Tutor.
+
+Your task is to turn any GitHub repository into a complete, beginner-friendly tutorial.
+
+Assume the user is a beginner developer.
+Never skip steps.
+Never assume prior knowledge.
+
+For every repository, always follow this structure:
+
+1. Explain what problem this repository solves.
+2. Explain the big picture architecture.
+3. Show the file structure and which file to start with.
+4. Explain the execution flow from input to output.
+5. Give step-by-step terminal commands to run locally.
+6. Explain each command and what it does.
+7. Explain how to modify or extend the project.
+8. Explain how to deploy (if applicable).
+
+Rules:
+- Use simple language.
+- Explain before showing code.
+- When showing code, explain what each part does.
+- Never say "just run this".
+- Teach like a real instructor, not like a chatbot.`;
+
+        let model;
+        try {
+            const ai = getAI(app, { backend: new GoogleAIBackend() });
+            model = getGenerativeModel(ai, { 
+                model: "gemini-2.5-flash",
+                systemInstruction: systemPrompt
+            });
+            console.log("Generative Model instance created with model 'gemini-2.5-flash' and System Instruction!");
+            updateStatus('success-text', "AI Tutor đã sẵn sàng. Hãy chọn một mẫu bên trên.");
+        } catch (e) {
+            console.error("Lỗi khi khởi tạo AI Model:", e);
+            updateStatus('error-text', `Lỗi khởi tạo AI Model: ${e.message}.<br>Kiểm tra Console (F12).`);
+        }
+
+        const templates = {
+            explain: "Explain this repository to me like I am a beginner.\n\nHere is the GitHub repository:\n<PASTE README OR LINK HERE>",
+            tutor: "Now teach me step by step.\nAfter each step, wait for me to confirm before continuing.\nIf I get errors, help me debug.",
+            debug: "I got this error. Explain why it happens and how to fix it in simple terms.\n<PASTE ERROR LOG>",
+            customize: "I want to adapt this repository for my own use case:\n<My goal here>\n\nExplain what I need to change in the code.",
+            deploy: "Show me how to deploy this project.\nAssume I have never deployed anything before.\nExplain every step."
+        };
+
+        window.setTemplate = function(type) {
+            promptInput.value = templates[type];
+            promptInput.focus();
+            
+            // Nếu đang dùng Mobile, tự động đóng sidebar sau khi chọn template để xem trước
+            if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
+                // toggleSidebar(); // Có thể mở comment dòng này nếu muốn tự đóng
+            }
+        };
+
+        async function callGeminiAPI() {
+            if (!model) {
+                updateStatus('error-text', "Mô hình AI chưa được khởi tạo. Vui lòng thử tải lại trang.");
+                return;
+            }
+
+            const promptText = promptInput.value.trim();
+            if (!promptText) {
+                updateStatus('error-text', "Vui lòng nhập lời nhắc hoặc dán link trước!");
+                return;
+            }
+
+            updateStatus('info-text', "Đang gửi yêu cầu đến Gemini...");
+            
+            // Loading Animation
+            responseContainer.innerHTML = '<div class="large-spinner"></div><div>Đang phân tích dữ liệu...</div>';
+            responseContainer.classList.add('loading');
+
+            buttonText.textContent = 'Đang xử lý...';
+            buttonSpinner.classList.remove('hidden');
+            sendPromptButton.disabled = true;
+
+            // Tự động đóng sidebar trên mobile khi bắt đầu chạy
+            if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
+                toggleSidebar();
+            }
+
+            try {
+                const result = await model.generateContent(promptText);
+                const response = result.response;
+                const text = response.text();
+
+                // Render Markdown sang HTML
+                responseContainer.innerHTML = marked.parse(text);
+                responseContainer.classList.remove('loading');
+                updateStatus('success-text', "Đã nhận phản hồi thành công.");
+                
+                // Cuộn lên đầu kết quả mới
+                document.getElementById('main-content').scrollTop = 0;
+
+            } catch (error) {
+                console.error("Lỗi khi gọi Gemini API:", error);
+                responseContainer.innerHTML = `<h3 style="color:#cf222e;">Đã xảy ra lỗi:</h3><p>${error.message}</p><p>Vui lòng kiểm tra Console (F12) để biết thêm chi tiết.</p>`;
+                responseContainer.classList.remove('loading');
+                updateStatus('error-text', `Lỗi: ${error.message}.`);
+            } finally {
+                buttonText.textContent = 'Gửi tới Gemini';
+                buttonSpinner.classList.add('hidden');
+                sendPromptButton.disabled = false;
+            }
+        }
+
+        if (sendPromptButton) {
+            sendPromptButton.addEventListener("click", callGeminiAPI);
+        }
+    </script>
+</body>
+</html>
