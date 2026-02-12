@@ -345,6 +345,15 @@
         .quick-btn-bug { background-color: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; }
         .quick-btn-bug:hover { background-color: #eaeeef; }
 
+        /* --- AUTH INFO HEADER --- */
+        .user-info {
+            font-size: 13px; color: #57606a; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: #f6f8fa; padding: 6px 10px; border-radius: 6px; border: 1px solid #d0d7de;
+        }
+        .logout-btn {
+            background: #fff; border: 1px solid #d0d7de; font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; color: #cf222e; font-weight: 500; transition: all 0.2s;
+        }
+        .logout-btn:hover { background: #ffebe9; border-color: #cf222e; }
+
         /* --- MOBILE RESPONSIVE (SIDEBAR TRƯỢT) --- */
         .mobile-header {
             display: none;
@@ -420,6 +429,12 @@
         <div class="sidebar-header">
             <h1>Gia Sư Lập Trình AI</h1>
             <h2>Mô hình: gemini-2.5-flash</h2>
+            
+            <!-- Vùng hiển thị thông tin tài khoản -->
+            <div id="userInfoDisplay" class="user-info hidden">
+                <span id="userEmail" style="overflow: hidden; text-overflow: ellipsis; max-width: 150px; white-space: nowrap;" title="Email"></span>
+                <button class="logout-btn" onclick="logoutUser()">Đăng xuất</button>
+            </div>
         </div>
         
         <div id="controls">
@@ -494,7 +509,7 @@
     <!-- Modal Nhập liệu (Prompt) -->
     <div id="promptModal" class="custom-modal-overlay">
         <div class="custom-modal">
-            <div class="custom-modal-title" id="promptTitle">Nhập thông tin</div>
+            <div class="custom-modal-title" id="promptTitle">Nhập thông বার্ত</div>
             <input type="text" id="promptInputVal" class="custom-modal-input" autocomplete="off">
             <div class="custom-modal-actions">
                 <button class="modal-btn modal-btn-cancel" onclick="closeModal('promptModal')">Hủy</button>
@@ -503,21 +518,40 @@
         </div>
     </div>
 
+    <!-- Modal Đăng nhập/Đăng ký -->
+    <div id="authModal" class="custom-modal-overlay show">
+        <div class="custom-modal">
+            <div class="custom-modal-title">Đăng nhập Đám Mây</div>
+            <div style="font-size: 13.5px; color: #57606a; margin-bottom: 15px; line-height: 1.4;">Đăng nhập để tự động lưu và đồng bộ lịch sử bài học của bạn trên máy chủ (Firestore).</div>
+            <div id="authError" style="color: #cf222e; font-size: 13px; margin-bottom: 10px; font-weight: 500;"></div>
+            <input type="email" id="authEmail" class="custom-modal-input" placeholder="Email của bạn (VD: user@email.com)">
+            <input type="password" id="authPassword" class="custom-modal-input" placeholder="Mật khẩu (Ít nhất 6 ký tự)">
+            <div class="custom-modal-actions" style="justify-content: space-between;">
+                <button class="modal-btn modal-btn-cancel" onclick="registerUser()">Đăng ký mới</button>
+                <button class="modal-btn modal-btn-primary" onclick="loginUser()">Đăng nhập</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-        import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-ai.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
+        import { getAI, getGenerativeModel, GoogleAIBackend } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-ai.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyDBeliQXZDzIOyVVfnKdoKi-yTMgt33its",
-          authDomain: "test-f9b86.firebaseapp.com",
-          projectId: "test-f9b86",
-          storageBucket: "test-f9b86.firebasestorage.app",
-          messagingSenderId: "853017830675",
-          appId: "1:853017830675:web:b56ebdccc9219c596ba6e6"
+          apiKey: "AIzaSyAtoX3PysX692bNg6nA55Qriv5P-7phmFQ",
+          authDomain: "aiminh-d96d4.firebaseapp.com",
+          projectId: "aiminh-d96d4",
+          storageBucket: "aiminh-d96d4.firebasestorage.app",
+          messagingSenderId: "159603803322",
+          appId: "1:159603803322:web:3693589412fca5c3456e83"
         };
 
         const app = initializeApp(firebaseConfig);
-        console.log("Firebase App initialized!");
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        console.log("Firebase & Firestore App initialized!");
         
         const promptInput = document.getElementById('promptInput');
         const sendPromptButton = document.getElementById('sendPromptButton');
@@ -526,11 +560,11 @@
         const responseContainer = document.getElementById('responseContainer');
         const statusMessage = document.getElementById('statusMessage');
 
-        // --- CÁC BIẾN & LOGIC CHO TÍNH NĂNG LƯU TRỮ (INDEXEDDB - VERSION 2) ---
-        let currentRepoId = null; // ID của Repo đang học trong Database
-        let sessionHistory = []; // Mảng chứa toàn bộ lịch sử [ {prompt, response} ]
-        let currentRepoIndex = ""; // Biến lưu trữ Page Index (Ngữ cảnh của Repo)
-        let activeTemplateType = "custom"; // Biến theo dõi loại Template đang dùng
+        // --- CÁC BIẾN & LOGIC HỆ THỐNG ---
+        let currentRepoId = null; 
+        let sessionHistory = []; 
+        let currentRepoIndex = ""; 
+        let activeTemplateType = "custom"; 
 
         window.clearRepoIndex = function() {
             currentRepoId = null;
@@ -548,6 +582,51 @@
         const historyList = document.getElementById('historyList');
         const quickActions = document.getElementById('quickActions');
         const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // --- LOGIC AUTH (ĐĂNG NHẬP / ĐĂNG KÝ) ---
+        const authModal = document.getElementById('authModal');
+        const authEmail = document.getElementById('authEmail');
+        const authPassword = document.getElementById('authPassword');
+        const authError = document.getElementById('authError');
+        const userInfoDisplay = document.getElementById('userInfoDisplay');
+        const userEmailSpan = document.getElementById('userEmail');
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                authModal.classList.remove('show');
+                userInfoDisplay.classList.remove('hidden');
+                userEmailSpan.textContent = user.email;
+                updateStatus('info-text', "Đã kết nối đám mây. Đang tải dữ liệu...");
+                loadHistory(); 
+            } else {
+                authModal.classList.add('show');
+                userInfoDisplay.classList.add('hidden');
+                historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Vui lòng đăng nhập để xem lịch sử.</div>';
+                clearRepoIndex(); 
+            }
+        });
+
+        window.loginUser = async function() {
+            try {
+                authError.textContent = "Đang đăng nhập...";
+                await signInWithEmailAndPassword(auth, authEmail.value, authPassword.value);
+            } catch (error) {
+                authError.textContent = "Lỗi đăng nhập: " + error.message;
+            }
+        };
+
+        window.registerUser = async function() {
+            try {
+                authError.textContent = "Đang tạo tài khoản...";
+                await createUserWithEmailAndPassword(auth, authEmail.value, authPassword.value);
+            } catch (error) {
+                authError.textContent = "Lỗi đăng ký: " + error.message;
+            }
+        };
+
+        window.logoutUser = async function() {
+            await signOut(auth);
+        };
 
         // --- LOGIC CUSTOM MODAL ---
         window.closeModal = function(modalId) {
@@ -586,139 +665,109 @@
             }
         }
 
-        const dbName = "AITutorDB";
-        const dbVersion = 2; // Nâng cấp version để đổi cấu trúc bảng
-        let db;
+        // --- LOGIC LƯU TRỮ LÊN ĐÁM MÂY (FIRESTORE) ---
+        let currentUserRepos = [];
 
-        function initDB() {
-            const request = indexedDB.open(dbName, dbVersion);
-            request.onerror = (event) => console.error("Lỗi mở IndexedDB", event);
-            request.onsuccess = (event) => {
-                db = event.target.result;
-                loadHistory(); 
-            };
-            request.onupgradeneeded = (event) => {
-                db = event.target.result;
-                // Tạo bảng lưu trữ theo dạng Mảng Repo (Thay vì từng tin nhắn)
-                if (!db.objectStoreNames.contains("repos")) {
-                    const objectStore = db.createObjectStore("repos", { keyPath: "id", autoIncrement: true });
-                    objectStore.createIndex("updatedAt", "updatedAt", { unique: false });
-                }
-            };
-        }
-        initDB();
-
-        function loadHistory() {
-            if (!db) return;
-            const transaction = db.transaction(["repos"], "readonly");
-            const store = transaction.objectStore("repos");
-            const request = store.getAll();
-            
-            request.onsuccess = () => {
-                const repos = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
+        async function loadHistory() {
+            if (!auth.currentUser) return;
+            const q = query(collection(db, `users/${auth.currentUser.uid}/repos`), orderBy("updatedAt", "desc"));
+            try {
+                const querySnapshot = await getDocs(q);
+                currentUserRepos = [];
                 historyList.innerHTML = "";
-                if (repos.length === 0) {
-                    historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Chưa có dự án nào được học.</div>';
+                
+                if (querySnapshot.empty) {
+                    historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Chưa có dự án nào được học trên đám mây.</div>';
                     return;
                 }
                 
-                repos.forEach(repo => {
+                querySnapshot.forEach(docSnap => {
+                    const repo = { id: docSnap.id, ...docSnap.data() };
+                    currentUserRepos.push(repo);
+                    
                     const dateStr = new Date(repo.updatedAt).toLocaleString('vi-VN');
                     const item = document.createElement('div');
                     item.className = 'history-item';
                     item.innerHTML = `
-                        <div style="overflow: hidden; flex-grow: 1;" onclick="viewRepo(${repo.id})">
+                        <div style="overflow: hidden; flex-grow: 1;" onclick="viewRepo('${repo.id}')">
                             <div class="history-title">${repo.title}</div>
                             <div class="history-date">${repo.history.length} bài giảng • ${dateStr}</div>
                         </div>
-                        <button class="delete-btn" onclick="deleteRepo(${repo.id}, event)" title="Xóa dự án này">🗑️</button>
+                        <button class="delete-btn" onclick="deleteRepo('${repo.id}', event)" title="Xóa dự án này">🗑️</button>
                     `;
                     historyList.appendChild(item);
                 });
-            };
+            } catch (error) {
+                console.error("Lỗi tải dữ liệu từ Firestore:", error);
+                updateStatus('error-text', "Lỗi tải dữ liệu Firestore. Vui lòng kiểm tra lại quyền (Rules).");
+            }
         }
 
         window.viewRepo = function(id) {
-            const transaction = db.transaction(["repos"], "readonly");
-            const store = transaction.objectStore("repos");
-            const request = store.get(id);
-            request.onsuccess = () => {
-                if(request.result) {
-                    const repo = request.result;
-                    currentRepoId = repo.id;
-                    currentRepoIndex = repo.repoIndex || "";
-                    sessionHistory = repo.history || [];
-                    
-                    renderChatHistory(); // Render lại toàn bộ phiên học ra màn hình
-                    
-                    if (currentRepoIndex !== "") {
-                        document.getElementById('repoContextBadge').classList.remove('hidden');
-                    }
-                    quickActions.classList.remove('hidden');
-                    updateStatus('info-text', `Đang tiếp tục học dự án: ${repo.title}`);
-                    
-                    // Đóng sidebar trên mobile
-                    if(window.innerWidth <= 850 && document.getElementById('sidebar').classList.contains('open')) {
-                        document.getElementById('sidebar').classList.remove('open');
-                        document.getElementById('sidebarOverlay').classList.remove('show');
-                    }
+            const repo = currentUserRepos.find(r => r.id === id);
+            if(repo) {
+                currentRepoId = repo.id;
+                currentRepoIndex = repo.repoIndex || "";
+                sessionHistory = repo.history || [];
+                
+                renderChatHistory(); 
+                
+                if (currentRepoIndex !== "") {
+                    document.getElementById('repoContextBadge').classList.remove('hidden');
                 }
-            };
+                quickActions.classList.remove('hidden');
+                updateStatus('info-text', `Đang tiếp tục học dự án: ${repo.title}`);
+                
+                if(window.innerWidth <= 850 && document.getElementById('sidebar').classList.contains('open')) {
+                    document.getElementById('sidebar').classList.remove('open');
+                    document.getElementById('sidebarOverlay').classList.remove('show');
+                }
+            }
         };
 
         window.deleteRepo = function(id, event) {
             event.stopPropagation();
-            showCustomConfirm("Xóa toàn bộ tiến trình học của dự án này?", () => {
-                const transaction = db.transaction(["repos"], "readwrite");
-                const store = transaction.objectStore("repos");
-                const request = store.delete(id);
-                request.onsuccess = () => {
-                    if (currentRepoId === id) clearRepoIndex(); // Reset nếu đang mở dự án bị xóa
+            showCustomConfirm("Xóa toàn bộ tiến trình học của dự án này trên đám mây?", async () => {
+                try {
+                    await deleteDoc(doc(db, `users/${auth.currentUser.uid}/repos`, id));
+                    if (currentRepoId === id) clearRepoIndex(); 
                     loadHistory();
-                    updateStatus('success-text', "Đã xóa dự án.");
-                };
+                    updateStatus('success-text', "Đã xóa dự án trên đám mây.");
+                } catch (error) {
+                    alert("Lỗi khi xóa: " + error.message);
+                }
             });
         };
 
-        // HÀM AUTO-SAVE (LƯU TỰ ĐỘNG)
-        function autoSaveRepo() {
-            if (!db || sessionHistory.length === 0) return;
+        async function autoSaveRepo() {
+            if (!auth.currentUser || sessionHistory.length === 0) return;
             
-            const transaction = db.transaction(["repos"], "readwrite");
-            const store = transaction.objectStore("repos");
+            const reposRef = collection(db, `users/${auth.currentUser.uid}/repos`);
 
-            // Nếu là dự án mới tinh, gợi ý đặt tên
             if (currentRepoId === null) {
                 let defaultTitle = "Dự án: " + sessionHistory[0].prompt.split('\n')[0].substring(0, 30) + "...";
-                showCustomPrompt("Đặt tên cho dự án này để lưu trữ:", defaultTitle, (title) => {
+                showCustomPrompt("Đặt tên dự án để lưu lên đám mây:", defaultTitle, async (title) => {
                     if (title.trim() === "") title = defaultTitle;
                     
-                    const newRepo = {
+                    const newRepoRef = doc(reposRef);
+                    currentRepoId = newRepoRef.id; 
+                    
+                    await setDoc(newRepoRef, {
                         title: title,
                         repoIndex: currentRepoIndex,
                         history: sessionHistory,
                         updatedAt: new Date().getTime()
-                    };
-                    
-                    const request = store.add(newRepo);
-                    request.onsuccess = (e) => {
-                        currentRepoId = e.target.result; // Lưu lại ID tự tăng
-                        loadHistory();
-                    };
+                    });
+                    loadHistory();
                 });
             } else {
-                // Đã có dự án, chỉ cần Update thêm mảng history
-                const getReq = store.get(currentRepoId);
-                getReq.onsuccess = () => {
-                    let repoData = getReq.result;
-                    if (repoData) {
-                        repoData.history = sessionHistory;
-                        repoData.repoIndex = currentRepoIndex;
-                        repoData.updatedAt = new Date().getTime();
-                        store.put(repoData);
-                        loadHistory();
-                    }
-                };
+                const repoRef = doc(db, `users/${auth.currentUser.uid}/repos`, currentRepoId);
+                await setDoc(repoRef, {
+                    repoIndex: currentRepoIndex,
+                    history: sessionHistory,
+                    updatedAt: new Date().getTime()
+                }, { merge: true }); 
+                loadHistory();
             }
         }
 
