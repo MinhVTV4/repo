@@ -1,542 +1,318 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gia Sư Lập Trình AI - Gemini API</title>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>Gia Sư Lập Trình AI - Material Design 3</title>
     
-    <!-- Thư viện Marked.js, Highlight.js và GitHub Markdown CSS -->
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com" rel="preconnect"/>
+    <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet"/>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Roboto"', 'sans-serif'],
+                        display: ['"Google Sans"', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: "#1a73e8", 
+                        "primary-hover": "#1557b0",
+                        "background-light": "#f8f9fa",
+                        "surface-light": "#ffffff",
+                    }
+                },
+            },
+        };
+    </script>
+
+    <!-- Thư viện Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css">
 
+    <!-- CSS bổ sung cho Scrollbar, Animation và Override Markdown -->
     <style>
-        /* CSS Cơ Bản & Reset */
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-        body { 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f6f8fa; /* Màu nền Github */
-            color: #24292f; 
-            display: flex;
-            height: 100vh; /* Sát lề, full màn hình */
-            overflow: hidden;
-        }
-
-        /* --- CỘT TRÁI (SIDEBAR / CONTROLS) --- */
-        #sidebar {
-            width: 360px;
-            background-color: #ffffff;
-            border-right: 1px solid #d0d7de;
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            z-index: 100;
-            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            flex-shrink: 0;
-        }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #dadce0; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #bdc1c6; }
         
-        .sidebar-header {
-            padding: 20px 20px 10px 20px;
-            border-bottom: 1px solid #eaeeef;
-        }
-        .sidebar-header h1 { 
-            color: #0969da; 
-            font-size: 1.25rem;
-            margin-bottom: 5px;
-        }
-        .sidebar-header h2 {
-            font-size: 0.85rem;
-            color: #57606a;
-            font-weight: normal;
-        }
-
-        #controls { 
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto; /* Cho phép cuộn nếu nội dung dài */
-            flex-grow: 1;
-        }
-
-        .section-title {
-            font-size: 0.9rem;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #24292f;
-        }
-
-        .template-buttons {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-bottom: 20px;
-        }
-        .template-btn {
-            padding: 10px 15px;
-            background-color: #f6f8fa;
-            color: #24292f;
-            border: 1px solid #d0d7de;
-            font-size: 13px;
-            border-radius: 6px;
-            cursor: pointer;
-            text-align: left;
-            transition: all 0.2s;
-            font-weight: 500;
-        }
-        .template-btn:hover {
-            background-color: #f3f4f6;
-            border-color: #0969da;
-            color: #0969da;
-        }
-
-        textarea { 
-            width: 100%; 
-            padding: 12px; 
-            margin-bottom: 15px; 
-            border: 1px solid #d0d7de; 
-            border-radius: 6px; 
-            resize: vertical;
-            font-size: 14px;
-            font-family: inherit;
-            min-height: 120px;
-            background-color: #f6f8fa;
-        }
-        textarea:focus {
-            outline: none;
-            border-color: #0969da;
-            box-shadow: 0 0 0 3px rgba(9,105,218,0.3);
-            background-color: #fff;
-        }
-
-        button#sendPromptButton { 
-            padding: 12px; 
-            background-color: #2da44e; /* Màu xanh Github action */
-            color: white; 
-            border: none; 
-            border-radius: 6px; 
-            cursor: pointer; 
-            font-size: 15px;
-            font-weight: 600;
-            transition: background-color 0.2s;
-            display: flex; 
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            width: 100%;
-        }
-        button#sendPromptButton:hover { background-color: #2c974b; }
-        button#sendPromptButton:disabled { background-color: #94d3a2; cursor: not-allowed; }
-
-        /* --- LỊCH SỬ BÀI HỌC (INDEXEDDB) --- */
-        #historyList {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .history-item {
-            padding: 10px;
-            background-color: #f6f8fa;
-            border: 1px solid #d0d7de;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 13px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            transition: all 0.2s;
-        }
-        .history-item:hover {
-            background-color: #f3f4f6;
-            border-color: #0969da;
-        }
-        .history-title {
-            font-weight: 600;
-            color: #24292f;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            max-width: 200px;
-            margin-bottom: 4px;
-        }
-        .history-date {
-            font-size: 11px;
-            color: #57606a;
-        }
-        .delete-btn {
-            background: none;
-            border: none;
-            color: #cf222e;
-            cursor: pointer;
-            padding: 6px;
-            border-radius: 4px;
-            font-size: 14px;
-            opacity: 0.6;
-            transition: all 0.2s;
-        }
-        .delete-btn:hover { background-color: #ffebe9; opacity: 1; }
-
-        .save-btn {
-            padding: 8px 16px;
-            background-color: #2da44e;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            transition: background-color 0.2s;
-        }
-        .save-btn:hover { background-color: #2c974b; }
-
-        /* --- TRẠNG THÁI (STATUS) --- */
-        .status-message {
-            margin-top: 15px;
-            font-size: 0.85rem;
-            text-align: center;
-            padding: 10px;
-            border-radius: 6px;
-            line-height: 1.4;
-        }
-        .status-message.error-text { background-color: #ffebe9; color: #cf222e; }
-        .status-message.success-text { background-color: #dafbe1; color: #1a7f37; }
-        .status-message.info-text { background-color: #ddf4ff; color: #0969da; }
-
-        /* --- CỘT PHẢI (MAIN CONTENT) --- */
-        #main-content {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            overflow-y: auto;
-            position: relative;
-        }
+        .markdown-body { background: transparent !important; font-family: inherit !important; }
+        .markdown-body pre { background-color: #0d1117 !important; border-radius: 12px !important; }
         
-        #responseContainer { 
-            padding: 40px; 
-            background-color: #fff; 
-            min-height: 100%; 
-            width: 100%;
-            max-width: 900px;
-            margin: 0 auto; /* Căn giữa nội dung văn bản */
-            box-shadow: 0 0 15px rgba(0,0,0,0.03);
-            transition: opacity 0.3s ease;
-        }
-        #responseContainer.loading {
-            opacity: 0.6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            color: #57606a;
-        }
-
-        .placeholder-text {
-            color: #57606a;
-            font-size: 1.1rem;
-            text-align: center;
-            margin-top: 20%;
-        }
-
-        /* --- SPINNER --- */
+        /* Spinner */
         .spinner {
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-left-color: #fff;
-            border-radius: 50%;
-            width: 16px;
-            height: 16px;
-            animation: spin 1s linear infinite;
+            border: 3px solid rgba(255, 255, 255, 0.3); border-left-color: #fff; border-radius: 50%;
+            width: 18px; height: 18px; animation: spin 1s linear infinite;
         }
         .large-spinner {
-            width: 40px;
-            height: 40px;
-            border-width: 4px;
-            border-left-color: #0969da;
-            border-color: rgba(9, 105, 218, 0.2);
-            border-left-color: #0969da;
-            margin-bottom: 15px;
+            width: 32px; height: 32px; border-width: 3px; border-color: rgba(26, 115, 232, 0.2);
+            border-left-color: #1a73e8; margin: 0;
         }
-        .hidden { display: none !important; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
 
-        /* --- CUSTOM MODALS (POPUP) --- */
+        /* Custom Modal Transition */
         .custom-modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.6);
-            z-index: 9999;
-            display: flex; align-items: center; justify-content: center;
-            opacity: 0; visibility: hidden;
-            transition: opacity 0.2s, visibility 0.2s;
+            opacity: 0; visibility: hidden; transition: opacity 0.2s, visibility 0.2s;
         }
-        .custom-modal-overlay.show {
-            opacity: 1; visibility: visible;
-        }
-        .custom-modal {
-            background: #fff;
-            padding: 24px;
-            border-radius: 8px;
-            width: 90%; max-width: 400px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-            transform: translateY(-20px);
-            transition: transform 0.2s;
-        }
-        .custom-modal-overlay.show .custom-modal {
-            transform: translateY(0);
-        }
-        .custom-modal-title { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: #24292f; }
-        .custom-modal-input { width: 100%; padding: 10px; border: 1px solid #d0d7de; border-radius: 6px; margin-bottom: 15px; font-size: 14px; }
-        .custom-modal-input:focus { outline: none; border-color: #0969da; }
-        .custom-modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
-        .modal-btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer; border: none; }
-        .modal-btn-cancel { background: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; }
-        .modal-btn-cancel:hover { background: #eaeeef; }
-        .modal-btn-danger { background: #cf222e; color: white; }
-        .modal-btn-danger:hover { background: #a40e26; }
-        .modal-btn-primary { background: #2da44e; color: white; }
-        .modal-btn-primary:hover { background: #2c974b; }
-
-        /* --- NHẬT KÝ HỌC TẬP (SESSION LOGS) --- */
-        .log-block {
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 1px dashed #eaeeef;
-        }
-        .log-prompt {
-            background-color: #f6f8fa;
-            padding: 12px 16px;
-            border-radius: 8px 8px 8px 0;
-            border-left: 4px solid #0969da;
-            color: #24292f;
-            font-weight: 500;
-            margin-bottom: 15px;
-            font-size: 14px;
-            white-space: pre-wrap;
-        }
-        .log-response {
-            /* Kế thừa markdown-body */
-        }
-        .loading-block {
-            display: flex; align-items: center; gap: 10px; color: #57606a; margin-top: 20px;
-        }
-
-        /* --- QUICK ACTIONS (THAO TÁC NHANH) --- */
-        #quickActions {
-            margin-top: 25px;
-            padding-top: 20px;
-            border-top: 1px solid #eaeeef;
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-        }
-        .quick-btn {
-            padding: 8px 16px; border-radius: 20px; font-size: 13.5px; font-weight: 500; cursor: pointer;
-            display: flex; align-items: center; gap: 6px; transition: all 0.2s; border: none;
-        }
-        .quick-btn-next { background-color: #0969da; color: white; }
-        .quick-btn-next:hover { background-color: #0550ae; transform: translateX(2px); }
-        .quick-btn-bug { background-color: #f6f8fa; color: #24292f; border: 1px solid #d0d7de; }
-        .quick-btn-bug:hover { background-color: #eaeeef; }
-
-        /* --- AUTH INFO HEADER --- */
-        .user-info {
-            font-size: 13px; color: #57606a; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; background: #f6f8fa; padding: 6px 10px; border-radius: 6px; border: 1px solid #d0d7de;
-        }
-        .logout-btn {
-            background: #fff; border: 1px solid #d0d7de; font-size: 12px; padding: 4px 8px; border-radius: 4px; cursor: pointer; color: #cf222e; font-weight: 500; transition: all 0.2s;
-        }
-        .logout-btn:hover { background: #ffebe9; border-color: #cf222e; }
-
-        /* --- MOBILE RESPONSIVE (SIDEBAR TRƯỢT) --- */
-        .mobile-header {
-            display: none;
-            align-items: center;
-            background-color: #24292f;
-            color: #fff;
-            padding: 12px 20px;
-            z-index: 101;
-        }
-        .mobile-header h1 {
-            font-size: 1.1rem;
-            margin-left: 15px;
-            font-weight: 600;
-        }
-        .hamburger-btn {
-            background: none;
-            border: none;
-            color: white;
-            font-size: 24px;
-            cursor: pointer;
-        }
-        #sidebarOverlay {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 99;
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        @media (max-width: 850px) {
-            body { flex-direction: column; }
-            .mobile-header { display: flex; }
-            
-            #sidebar {
-                position: fixed;
-                top: 0; bottom: 0; left: 0;
-                width: 320px;
-                transform: translateX(-100%);
-                box-shadow: 4px 0 15px rgba(0,0,0,0.1);
-            }
+        .custom-modal-overlay.show { opacity: 1; visibility: visible; }
+        .custom-modal { transform: translateY(-20px); transition: transform 0.2s; }
+        .custom-modal-overlay.show .custom-modal { transform: translateY(0); }
+        
+        /* Sidebar transition cho Mobile */
+        #sidebar { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        @media (max-width: 768px) {
+            #sidebar { position: fixed; transform: translateX(-100%); z-index: 50; }
             #sidebar.open { transform: translateX(0); }
-            
-            #sidebarOverlay.show {
-                display: block;
-                opacity: 1;
-            }
-
-            .sidebar-header { display: none; /* Ẩn header trái trên mobile do đã có thanh đen trên cùng */ }
-            
-            #main-content {
-                height: calc(100vh - 53px); /* Trừ đi height của mobile header */
-            }
-            #responseContainer { padding: 20px; }
-            .placeholder-text { margin-top: 30%; font-size: 1rem; }
         }
     </style>
 </head>
-<body>
+<body class="bg-background-light text-gray-800 font-sans h-screen flex overflow-hidden selection:bg-primary selection:text-white">
 
-    <!-- Header dành riêng cho Mobile -->
-    <div class="mobile-header">
-        <button class="hamburger-btn" id="menuToggle">☰</button>
-        <h1>Gia Sư Lập Trình AI</h1>
-    </div>
+    <!-- Sidebar Overlay (Mobile) -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-gray-900/50 z-40 hidden opacity-0 transition-opacity"></div>
 
-    <!-- Lớp phủ màn mờ trên Mobile khi mở Sidebar -->
-    <div id="sidebarOverlay"></div>
-
-    <!-- CỘT TRÁI: Thanh công cụ -->
-    <div id="sidebar">
-        <div class="sidebar-header">
-            <h1>Gia Sư Lập Trình AI</h1>
-            <h2>Mô hình: gemini-2.5-flash</h2>
-            
-            <!-- Vùng hiển thị thông tin tài khoản -->
-            <div id="userInfoDisplay" class="user-info hidden">
-                <span id="userEmail" style="overflow: hidden; text-overflow: ellipsis; max-width: 150px; white-space: nowrap;" title="Email"></span>
-                <button class="logout-btn" onclick="logoutUser()">Đăng xuất</button>
+    <!-- CỘT TRÁI (SIDEBAR) -->
+    <aside id="sidebar" class="w-80 md:w-96 flex flex-col border-r border-gray-200 bg-surface-light shadow-sm h-full flex-shrink-0">
+        <div class="p-5 pb-2 border-b border-transparent">
+            <h1 class="font-display text-2xl font-medium text-primary flex items-center gap-2">
+                <span class="material-symbols-rounded text-3xl">school</span> Gia Sư Lập Trình AI
+            </h1>
+            <div class="flex items-center gap-2 mt-2 px-1">
+                <span class="material-symbols-rounded text-sm text-green-600">bolt</span>
+                <span class="text-xs font-medium text-gray-500 uppercase tracking-wide">Mô hình: gemini-2.5-flash</span>
             </div>
+        </div>
+
+        <div class="flex-1 overflow-y-auto px-4 py-4 space-y-6">
+            <!-- Khung Mẫu -->
+            <section>
+                <div class="flex items-center justify-between mb-3 px-1">
+                    <h2 class="text-sm font-medium text-gray-600">Khung mẫu (Templates)</h2>
+                    <span class="material-symbols-rounded text-gray-400 text-lg cursor-pointer hover:text-primary">info</span>
+                </div>
+                <div class="space-y-2">
+                    <button onclick="setTemplate('explain')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
+                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">menu_book</span>
+                        <span class="text-sm font-medium text-gray-700">1. Giải thích Repo (Nhập môn)</span>
+                    </button>
+                    <button onclick="setTemplate('tutor')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
+                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">steps</span>
+                        <span class="text-sm font-medium text-gray-700">2. Dạy từng bước (Thực hành)</span>
+                    </button>
+                    <button onclick="setTemplate('debug')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
+                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">bug_report</span>
+                        <span class="text-sm font-medium text-gray-700">3. Sửa lỗi (Debug Terminal)</span>
+                    </button>
+                    <button onclick="setTemplate('customize')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
+                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">tune</span>
+                        <span class="text-sm font-medium text-gray-700">4. Tùy chỉnh Project</span>
+                    </button>
+                    <button onclick="setTemplate('deploy')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
+                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">rocket_launch</span>
+                        <span class="text-sm font-medium text-gray-700">5. Hướng dẫn Triển khai</span>
+                    </button>
+                </div>
+            </section>
+
+            <!-- Lời nhắc -->
+            <section class="flex flex-col gap-3">
+                <label class="text-sm font-medium text-gray-600 px-1">Lời nhắc (Prompt)</label>
+                
+                <!-- Badge ghi nhớ ngữ cảnh -->
+                <div id="repoContextBadge" class="hidden bg-green-50 border border-green-200 p-3 rounded-xl flex items-start gap-3 shadow-sm">
+                    <span class="material-symbols-rounded text-green-600 text-lg flex-shrink-0 mt-0.5">push_pin</span>
+                    <div class="flex-1">
+                        <p class="text-xs text-green-800 font-medium">Đã ghi nhớ dự án.</p>
+                        <p class="text-[11px] text-green-600">Sẵn sàng dạy từng bước.</p>
+                    </div>
+                    <button onclick="clearRepoIndex()" class="text-green-500 hover:text-green-700 transition-colors" title="Xóa ghi nhớ">
+                        <span class="material-symbols-rounded text-lg">close</span>
+                    </button>
+                </div>
+
+                <div class="relative">
+                    <textarea id="promptInput" class="w-full h-32 p-3 rounded-xl border border-gray-300 bg-white text-sm text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-primary/50 focus:border-primary resize-none shadow-sm transition-all" placeholder="Nhập vào các mẫu bên trên hoặc tự dán link GitHub / nhập câu hỏi của bạn vào đây..."></textarea>
+                </div>
+                
+                <button id="sendPromptButton" class="w-full bg-primary hover:bg-primary-hover disabled:bg-blue-300 disabled:cursor-not-allowed text-white font-medium py-3 px-4 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center gap-2">
+                    <span class="material-symbols-rounded text-xl">sparkles</span>
+                    <span id="buttonText">Gửi tới Gemini</span>
+                    <div id="buttonSpinner" class="spinner hidden"></div>
+                </button>
+                
+                <!-- Status Message -->
+                <p id="statusMessage" class="text-xs text-center font-medium mt-1 px-2 transition-colors"></p>
+            </section>
+
+            <!-- Lịch sử (Các dự án đã học) -->
+            <section>
+                <div class="flex items-center justify-between mb-3 px-1 mt-2 border-t border-gray-100 pt-4">
+                    <h2 class="text-sm font-medium text-gray-600">Các dự án đã học</h2>
+                </div>
+                <div id="historyList" class="space-y-2">
+                    <!-- Sẽ được đổ data từ JS -->
+                    <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <span class="material-symbols-rounded text-gray-300 text-3xl mb-2">folder_off</span>
+                        <p class="text-xs text-gray-400">Chưa có dự án nào được học.</p>
+                    </div>
+                </div>
+            </section>
         </div>
         
-        <div id="controls">
-            <div class="section-title">Khung mẫu (Templates)</div>
-            <div class="template-buttons">
-                <button class="template-btn" onclick="setTemplate('explain')">📖 1. Giải thích Repo (Nhập môn)</button>
-                <button class="template-btn" onclick="setTemplate('tutor')">🎓 2. Dạy từng bước (Thực hành)</button>
-                <button class="template-btn" onclick="setTemplate('debug')">🐛 3. Sửa lỗi (Debug Terminal)</button>
-                <button class="template-btn" onclick="setTemplate('customize')">🛠️ 4. Tùy chỉnh Project</button>
-                <button class="template-btn" onclick="setTemplate('deploy')">🚀 5. Hướng dẫn Triển khai</button>
-            </div>
-            
-            <div class="section-title">Lời nhắc (Prompt)</div>
-            
-            <div id="repoContextBadge" class="hidden" style="font-size: 12px; color: #1a7f37; background-color: #dafbe1; padding: 8px; border-radius: 6px; margin-bottom: 10px; border: 1px solid #a3e4b5; display: flex; justify-content: space-between; align-items: center;">
-                <span>📌 Đã ghi nhớ cấu trúc dự án. (Sẵn sàng dạy từng bước)</span>
-                <button onclick="clearRepoIndex()" style="background: none; border: none; color: #cf222e; cursor: pointer; font-size: 16px; font-weight: bold; line-height: 1;" title="Xóa ghi nhớ">×</button>
-            </div>
-            
-            <textarea id="promptInput" placeholder="Nhấp vào các mẫu bên trên hoặc tự dán link GitHub / nhập câu hỏi của bạn vào đây..."></textarea>
-            
-            <button id="sendPromptButton">
-                <span id="buttonText">Gửi tới Gemini</span>
-                <div id="buttonSpinner" class="spinner hidden"></div>
-            </button>
-            
-            <p id="statusMessage" class="status-message"></p>
-
-            <hr style="border: 0; border-top: 1px solid #d0d7de; margin: 20px 0;">
-            
-            <div class="section-title">Các dự án đã học</div>
-            <div id="historyList">
-                <div style="font-size: 13px; color: #57606a;">Chưa có dự án nào.</div>
-            </div>
+        <div class="p-4 border-t border-gray-200 text-xs text-center text-gray-400">
+            © 2026 AI Tutor Platform
         </div>
-    </div>
-    
-    <!-- CỘT PHẢI: Khung hiển thị nội dung -->
-    <div id="main-content">
-        <div id="responseContainer" class="markdown-body">
-            <!-- XÓA NÚT LƯU THỦ CÔNG, THAY BẰNG CONTAINER CHỨA LỊCH SỬ -->
-            <div id="chatHistoryContainer">
-                <div class="placeholder-text">
-                    Xin chào! <br><br>Hãy dán một đường dẫn GitHub hoặc nhập lời nhắc ở cột bên trái để bắt đầu buổi học.
+    </aside>
+
+    <!-- CỘT PHẢI (MAIN CONTENT) -->
+    <main class="flex-1 flex flex-col relative bg-white">
+        <!-- Header -->
+        <header class="h-16 flex items-center justify-between px-4 md:px-6 border-b border-gray-100 bg-white z-10 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button id="menuToggle" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
+                    <span class="material-symbols-rounded">menu</span>
+                </button>
+                <span class="text-sm font-medium text-gray-600">Phiên làm việc</span>
+            </div>
+            
+            <!-- Vùng hiển thị Auth -->
+            <div class="flex items-center gap-2">
+                <div id="userInfoDisplay" class="hidden flex items-center gap-3">
+                    <span id="userEmail" class="text-sm text-gray-600 hidden sm:block max-w-[150px] truncate"></span>
+                    <button onclick="logoutUser()" class="text-xs font-medium text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors border border-red-100">Đăng xuất</button>
+                </div>
+                <div id="userAvatar" class="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-500 to-purple-500 text-white flex items-center justify-center text-xs font-bold shadow-sm cursor-pointer hidden">
+                    U
                 </div>
             </div>
-            
-            <div id="loadingIndicator" class="loading-block hidden">
-                <div class="spinner" style="border-left-color: #0969da; border-width: 3px;"></div> Đang phân tích dữ liệu...
-            </div>
-            
-            <!-- Thanh thao tác nhanh (Mặc định ẩn) -->
-            <div id="quickActions" class="hidden">
-                <button id="btnNextStep" class="quick-btn quick-btn-next">Tiếp tục bước tiếp theo ➡️</button>
-                <button id="btnGotBug" class="quick-btn quick-btn-bug">Tôi gặp lỗi ở bước này 🐛</button>
+        </header>
+
+        <!-- Body -->
+        <div id="main-content" class="flex-1 overflow-y-auto p-4 md:p-8 relative scroll-smooth">
+            <div class="max-w-4xl mx-auto w-full flex flex-col h-full">
+                
+                <!-- Trạng thái trống (Empty State) -->
+                <div id="emptyStateContainer" class="flex-1 flex flex-col items-center justify-center text-center animate-fade-in py-10">
+                    <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-8 shadow-sm">
+                        <span class="material-symbols-rounded text-primary text-5xl">smart_toy</span>
+                    </div>
+                    <h2 class="font-display text-3xl md:text-4xl text-gray-800 mb-4 font-normal">
+                        Xin chào!
+                    </h2>
+                    <p class="max-w-xl text-lg text-gray-500 leading-relaxed font-light">
+                        Hãy dán một đường dẫn GitHub hoặc nhập lời nhắc ở cột bên trái để bắt đầu buổi học. Tôi sẵn sàng hỗ trợ bạn lập trình.
+                    </p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 max-w-2xl w-full">
+                        <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all text-left">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="material-symbols-rounded text-orange-500 bg-orange-100 p-1.5 rounded-lg">code</span>
+                                <h3 class="font-medium text-gray-700">Phân tích mã nguồn</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Hiểu rõ cấu trúc và logic của repo GitHub.</p>
+                        </div>
+                        <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all text-left">
+                            <div class="flex items-center gap-3 mb-2">
+                                <span class="material-symbols-rounded text-purple-500 bg-purple-100 p-1.5 rounded-lg">bug_report</span>
+                                <h3 class="font-medium text-gray-700">Gỡ lỗi thông minh</h3>
+                            </div>
+                            <p class="text-sm text-gray-500">Tìm và sửa lỗi nhanh chóng với giải thích chi tiết.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lịch sử Chat -->
+                <div id="chatHistoryContainer" class="flex-1"></div>
+
+                <!-- Loading Indicator -->
+                <div id="loadingIndicator" class="hidden flex items-center gap-3 text-gray-500 py-6 mb-4">
+                    <div class="large-spinner spinner"></div>
+                    <span class="text-sm font-medium animate-pulse">Đang phân tích dữ liệu...</span>
+                </div>
+
+                <!-- Thao tác nhanh -->
+                <div id="quickActions" class="hidden mt-6 pt-6 border-t border-gray-100 flex flex-wrap gap-3 pb-8">
+                    <button id="btnNextStep" class="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-primary hover:bg-blue-100 hover:text-blue-700 rounded-full font-medium text-sm transition-all border border-blue-100">
+                        <span>Tiếp tục bước tiếp theo</span>
+                        <span class="material-symbols-rounded text-lg">arrow_forward</span>
+                    </button>
+                    <button id="btnGotBug" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 rounded-full font-medium text-sm transition-all shadow-sm">
+                        <span>Tôi gặp lỗi ở bước này</span>
+                        <span class="material-symbols-rounded text-lg text-orange-500">bug_report</span>
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- HTML CÁC MODALS -->
+    <!-- MODALS -->
     <!-- Modal Xác nhận (Confirm) -->
-    <div id="confirmModal" class="custom-modal-overlay">
-        <div class="custom-modal">
-            <div class="custom-modal-title" id="confirmMessage">Bạn có chắc chắn?</div>
-            <div class="custom-modal-actions">
-                <button class="modal-btn modal-btn-cancel" onclick="closeModal('confirmModal')">Hủy</button>
-                <button class="modal-btn modal-btn-danger" id="confirmYesBtn">Xóa</button>
+    <div id="confirmModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[999] flex items-center justify-center backdrop-blur-sm">
+        <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
+            <h3 class="font-display text-lg font-medium text-gray-800 mb-2">Xác nhận</h3>
+            <p id="confirmMessage" class="text-gray-600 mb-6 text-sm">Bạn có chắc chắn?</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('confirmModal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Hủy</button>
+                <button id="confirmYesBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm">Đồng ý xóa</button>
             </div>
         </div>
     </div>
 
     <!-- Modal Nhập liệu (Prompt) -->
-    <div id="promptModal" class="custom-modal-overlay">
-        <div class="custom-modal">
-            <div class="custom-modal-title" id="promptTitle">Nhập thông tin</div>
-            <input type="text" id="promptInputVal" class="custom-modal-input" autocomplete="off">
-            <div class="custom-modal-actions">
-                <button class="modal-btn modal-btn-cancel" onclick="closeModal('promptModal')">Hủy</button>
-                <button class="modal-btn modal-btn-primary" id="promptYesBtn">Lưu bài</button>
+    <div id="promptModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[999] flex items-center justify-center backdrop-blur-sm">
+        <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
+            <h3 id="promptTitle" class="font-display text-lg font-medium text-gray-800 mb-4">Nhập thông tin</h3>
+            <input type="text" id="promptInputVal" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm text-gray-800 mb-6" autocomplete="off">
+            <div class="flex justify-end gap-3">
+                <button onclick="closeModal('promptModal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Hủy</button>
+                <button id="promptYesBtn" class="px-4 py-2 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors shadow-sm">Lưu</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Đăng nhập/Đăng ký -->
-    <div id="authModal" class="custom-modal-overlay show">
-        <div class="custom-modal">
-            <div class="custom-modal-title">Đăng nhập Đám Mây</div>
-            <div style="font-size: 13.5px; color: #57606a; margin-bottom: 15px; line-height: 1.4;">Đăng nhập để tự động lưu và đồng bộ lịch sử bài học của bạn trên máy chủ (Firestore).</div>
-            <div id="authError" style="color: #cf222e; font-size: 13px; margin-bottom: 10px; font-weight: 500;"></div>
-            <input type="email" id="authEmail" class="custom-modal-input" placeholder="Email của bạn (VD: user@email.com)">
-            <input type="password" id="authPassword" class="custom-modal-input" placeholder="Mật khẩu (Ít nhất 6 ký tự)">
-            <div class="custom-modal-actions" style="justify-content: space-between;">
-                <button class="modal-btn modal-btn-cancel" onclick="registerUser()">Đăng ký mới</button>
-                <button class="modal-btn modal-btn-primary" onclick="loginUser()">Đăng nhập</button>
+    <!-- Modal Auth (Đăng nhập) -->
+    <div id="authModal" class="custom-modal-overlay show fixed inset-0 bg-gray-900/60 z-[1000] flex items-center justify-center backdrop-blur-md">
+        <div class="custom-modal bg-white rounded-3xl p-8 w-[90%] max-w-md shadow-2xl border border-gray-100">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary">
+                    <span class="material-symbols-rounded text-3xl">cloud_sync</span>
+                </div>
+                <h3 class="font-display text-2xl font-medium text-gray-800 mb-2">Đồng bộ Đám mây</h3>
+                <p class="text-gray-500 text-sm">Đăng nhập để tự động lưu và đồng bộ lịch sử học tập của bạn qua Firestore.</p>
+            </div>
+            
+            <div id="authError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-4 border border-red-100 font-medium text-center"></div>
+            
+            <div class="space-y-4 mb-8">
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1 ml-1">Email</label>
+                    <input type="email" id="authEmail" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm" placeholder="user@email.com">
+                </div>
+                <div>
+                    <label class="block text-xs font-medium text-gray-600 mb-1 ml-1">Mật khẩu</label>
+                    <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm" placeholder="Ít nhất 6 ký tự">
+                </div>
+            </div>
+            
+            <div class="flex gap-3">
+                <button onclick="registerUser()" class="flex-1 py-3 text-sm font-medium text-primary bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors border border-blue-100">Tạo tài khoản</button>
+                <button onclick="loginUser()" class="flex-1 py-3 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors shadow-md hover:shadow-lg">Đăng nhập</button>
             </div>
         </div>
     </div>
 
+    <!-- LOGIC JS (Giữ nguyên 100% Core Logic cũ) -->
     <script type="module">
-        // --- BẮT ĐẦU: SỬA LỖI AbortSignal.any ---
-        // Polyfill cho AbortSignal.any nhằm hỗ trợ các trình duyệt/môi trường thiếu hàm này
-        // (Đây là nguyên nhân gây ra lỗi "AbortSignal.any is not a function" trên Firebase SDK 12.9.0)
+        // Polyfill cho AbortSignal.any
         if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
             AbortSignal.any = function(signals) {
                 const controller = new AbortController();
@@ -550,7 +326,6 @@
                 return controller.signal;
             };
         }
-        // --- KẾT THÚC: SỬA LỖI AbortSignal.any ---
 
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
@@ -569,76 +344,95 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        console.log("Firebase & Firestore App initialized!");
         
         const promptInput = document.getElementById('promptInput');
         const sendPromptButton = document.getElementById('sendPromptButton');
         const buttonText = document.getElementById('buttonText');
         const buttonSpinner = document.getElementById('buttonSpinner');
-        const responseContainer = document.getElementById('responseContainer');
         const statusMessage = document.getElementById('statusMessage');
 
-        // --- CÁC BIẾN & LOGIC HỆ THỐNG ---
+        // Biến hệ thống
         let currentRepoId = null; 
         let sessionHistory = []; 
         let currentRepoIndex = ""; 
         let activeTemplateType = "custom"; 
+
+        const emptyStateContainer = document.getElementById('emptyStateContainer');
+        const chatHistoryContainer = document.getElementById('chatHistoryContainer');
+        const historyList = document.getElementById('historyList');
+        const quickActions = document.getElementById('quickActions');
+        const loadingIndicator = document.getElementById('loadingIndicator');
 
         window.clearRepoIndex = function() {
             currentRepoId = null;
             currentRepoIndex = "";
             sessionHistory = [];
             document.getElementById('repoContextBadge').classList.add('hidden');
-            document.getElementById('quickActions').classList.add('hidden');
-            document.getElementById('chatHistoryContainer').innerHTML = `
-                <div class="placeholder-text">Đã tạo phiên học mới.<br><br>Hãy dán link dự án mới để bắt đầu.</div>
-            `;
-            updateStatus('info-text', "Đã tạo phiên học mới.");
+            quickActions.classList.add('hidden');
+            chatHistoryContainer.innerHTML = '';
+            emptyStateContainer.classList.remove('hidden'); // Hiện lại màn hình chào
+            updateStatus('text-blue-600', "Đã tạo phiên học mới.");
         };
 
-        const chatHistoryContainer = document.getElementById('chatHistoryContainer');
-        const historyList = document.getElementById('historyList');
-        const quickActions = document.getElementById('quickActions');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-
-        // --- LOGIC AUTH (ĐĂNG NHẬP / ĐĂNG KÝ) ---
+        // --- LOGIC AUTH ---
         const authModal = document.getElementById('authModal');
         const authEmail = document.getElementById('authEmail');
         const authPassword = document.getElementById('authPassword');
         const authError = document.getElementById('authError');
         const userInfoDisplay = document.getElementById('userInfoDisplay');
         const userEmailSpan = document.getElementById('userEmail');
+        const userAvatar = document.getElementById('userAvatar');
+
+        function showAuthError(msg) {
+            authError.textContent = msg;
+            authError.classList.remove('hidden');
+        }
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authModal.classList.remove('show');
                 userInfoDisplay.classList.remove('hidden');
+                userAvatar.classList.remove('hidden');
                 userEmailSpan.textContent = user.email;
-                updateStatus('info-text', "Đã kết nối đám mây. Đang tải dữ liệu...");
+                userAvatar.textContent = user.email.charAt(0).toUpperCase();
+                updateStatus('text-blue-600', "Đã kết nối đám mây. Đang tải dữ liệu...");
                 loadHistory(); 
             } else {
                 authModal.classList.add('show');
                 userInfoDisplay.classList.add('hidden');
-                historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Vui lòng đăng nhập để xem lịch sử.</div>';
+                userAvatar.classList.add('hidden');
+                historyList.innerHTML = `
+                    <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <span class="material-symbols-rounded text-gray-300 text-3xl mb-2">lock</span>
+                        <p class="text-xs text-gray-400">Vui lòng đăng nhập để xem.</p>
+                    </div>`;
                 clearRepoIndex(); 
             }
         });
 
         window.loginUser = async function() {
             try {
-                authError.textContent = "Đang đăng nhập...";
+                showAuthError("Đang đăng nhập...");
+                authError.classList.replace('bg-red-50', 'bg-blue-50');
+                authError.classList.replace('text-red-600', 'text-blue-600');
                 await signInWithEmailAndPassword(auth, authEmail.value, authPassword.value);
             } catch (error) {
-                authError.textContent = "Lỗi đăng nhập: " + error.message;
+                authError.classList.replace('bg-blue-50', 'bg-red-50');
+                authError.classList.replace('text-blue-600', 'text-red-600');
+                showAuthError("Lỗi đăng nhập: " + error.message);
             }
         };
 
         window.registerUser = async function() {
             try {
-                authError.textContent = "Đang tạo tài khoản...";
+                showAuthError("Đang tạo tài khoản...");
+                authError.classList.replace('bg-red-50', 'bg-blue-50');
+                authError.classList.replace('text-red-600', 'text-blue-600');
                 await createUserWithEmailAndPassword(auth, authEmail.value, authPassword.value);
             } catch (error) {
-                authError.textContent = "Lỗi đăng ký: " + error.message;
+                authError.classList.replace('bg-blue-50', 'bg-red-50');
+                authError.classList.replace('text-blue-600', 'text-red-600');
+                showAuthError("Lỗi đăng ký: " + error.message);
             }
         };
 
@@ -655,12 +449,8 @@
             document.getElementById('confirmMessage').innerText = message;
             const overlay = document.getElementById('confirmModal');
             const yesBtn = document.getElementById('confirmYesBtn');
-            
             overlay.classList.add('show');
-            yesBtn.onclick = function() {
-                closeModal('confirmModal');
-                onConfirm();
-            };
+            yesBtn.onclick = function() { closeModal('confirmModal'); onConfirm(); };
         }
 
         function showCustomPrompt(title, defaultVal, onConfirm) {
@@ -668,22 +458,14 @@
             const inputField = document.getElementById('promptInputVal');
             const overlay = document.getElementById('promptModal');
             const yesBtn = document.getElementById('promptYesBtn');
-            
             inputField.value = defaultVal;
             overlay.classList.add('show');
             inputField.focus();
-            
-            yesBtn.onclick = function() {
-                closeModal('promptModal');
-                onConfirm(inputField.value);
-            };
-            
-            inputField.onkeydown = function(e) {
-                if (e.key === 'Enter') yesBtn.click();
-            }
+            yesBtn.onclick = function() { closeModal('promptModal'); onConfirm(inputField.value); };
+            inputField.onkeydown = function(e) { if (e.key === 'Enter') yesBtn.click(); }
         }
 
-        // --- LOGIC LƯU TRỮ LÊN ĐÁM MÂY (FIRESTORE) ---
+        // --- LOGIC LƯU TRỮ FIRESTORE ---
         let currentUserRepos = [];
 
         async function loadHistory() {
@@ -695,7 +477,11 @@
                 historyList.innerHTML = "";
                 
                 if (querySnapshot.empty) {
-                    historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Chưa có dự án nào được học trên đám mây.</div>';
+                    historyList.innerHTML = `
+                        <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                            <span class="material-symbols-rounded text-gray-300 text-3xl mb-2">folder_off</span>
+                            <p class="text-xs text-gray-400">Chưa có dự án nào.</p>
+                        </div>`;
                     return;
                 }
                 
@@ -703,21 +489,23 @@
                     const repo = { id: docSnap.id, ...docSnap.data() };
                     currentUserRepos.push(repo);
                     
-                    const dateStr = new Date(repo.updatedAt).toLocaleString('vi-VN');
+                    const dateStr = new Date(repo.updatedAt).toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
                     const item = document.createElement('div');
-                    item.className = 'history-item';
+                    item.className = 'group flex items-center justify-between p-3 rounded-xl border border-transparent bg-gray-50 hover:bg-blue-50 hover:border-blue-100 cursor-pointer transition-all mb-2';
                     item.innerHTML = `
                         <div style="overflow: hidden; flex-grow: 1;" onclick="viewRepo('${repo.id}')">
-                            <div class="history-title">${repo.title}</div>
-                            <div class="history-date">${repo.history.length} bài giảng • ${dateStr}</div>
+                            <div class="text-sm font-medium text-gray-700 truncate">${repo.title}</div>
+                            <div class="text-[11px] text-gray-500 mt-0.5">${repo.history.length} mục • ${dateStr}</div>
                         </div>
-                        <button class="delete-btn" onclick="deleteRepo('${repo.id}', event)" title="Xóa dự án này">🗑️</button>
+                        <button class="opacity-0 group-hover:opacity-100 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all" onclick="deleteRepo('${repo.id}', event)" title="Xóa">
+                            <span class="material-symbols-rounded text-[18px]">delete</span>
+                        </button>
                     `;
                     historyList.appendChild(item);
                 });
             } catch (error) {
-                console.error("Lỗi tải dữ liệu từ Firestore:", error);
-                updateStatus('error-text', "Lỗi tải dữ liệu Firestore. Vui lòng kiểm tra lại quyền (Rules).");
+                console.error("Lỗi tải Firestore:", error);
+                updateStatus('text-red-600', "Lỗi tải dữ liệu. Kiểm tra Rules.");
             }
         }
 
@@ -734,11 +522,10 @@
                     document.getElementById('repoContextBadge').classList.remove('hidden');
                 }
                 quickActions.classList.remove('hidden');
-                updateStatus('info-text', `Đang tiếp tục học dự án: ${repo.title}`);
+                updateStatus('text-blue-600', `Đang học dự án: ${repo.title}`);
                 
-                if(window.innerWidth <= 850 && document.getElementById('sidebar').classList.contains('open')) {
-                    document.getElementById('sidebar').classList.remove('open');
-                    document.getElementById('sidebarOverlay').classList.remove('show');
+                if(window.innerWidth <= 768 && document.getElementById('sidebar').classList.contains('open')) {
+                    toggleSidebar();
                 }
             }
         };
@@ -750,7 +537,7 @@
                     await deleteDoc(doc(db, `users/${auth.currentUser.uid}/repos`, id));
                     if (currentRepoId === id) clearRepoIndex(); 
                     loadHistory();
-                    updateStatus('success-text', "Đã xóa dự án trên đám mây.");
+                    updateStatus('text-green-600', "Đã xóa dự án trên đám mây.");
                 } catch (error) {
                     alert("Lỗi khi xóa: " + error.message);
                 }
@@ -759,53 +546,51 @@
 
         async function autoSaveRepo() {
             if (!auth.currentUser || sessionHistory.length === 0) return;
-            
             const reposRef = collection(db, `users/${auth.currentUser.uid}/repos`);
 
             if (currentRepoId === null) {
-                let defaultTitle = "Dự án: " + sessionHistory[0].prompt.split('\n')[0].substring(0, 30) + "...";
+                let defaultTitle = "Dự án: " + sessionHistory[0].prompt.split('\n')[0].substring(0, 25) + "...";
                 showCustomPrompt("Đặt tên dự án để lưu lên đám mây:", defaultTitle, async (title) => {
                     if (title.trim() === "") title = defaultTitle;
-                    
                     const newRepoRef = doc(reposRef);
                     currentRepoId = newRepoRef.id; 
-                    
                     await setDoc(newRepoRef, {
-                        title: title,
-                        repoIndex: currentRepoIndex,
-                        history: sessionHistory,
-                        updatedAt: new Date().getTime()
+                        title: title, repoIndex: currentRepoIndex, history: sessionHistory, updatedAt: new Date().getTime()
                     });
                     loadHistory();
                 });
             } else {
                 const repoRef = doc(db, `users/${auth.currentUser.uid}/repos`, currentRepoId);
                 await setDoc(repoRef, {
-                    repoIndex: currentRepoIndex,
-                    history: sessionHistory,
-                    updatedAt: new Date().getTime()
+                    repoIndex: currentRepoIndex, history: sessionHistory, updatedAt: new Date().getTime()
                 }, { merge: true }); 
                 loadHistory();
             }
         }
 
-        // Hàm vẽ toàn bộ lịch sử ra màn hình
+        // --- RENDER GIAO DIỆN CHAT ---
         function renderChatHistory() {
+            emptyStateContainer.classList.add('hidden'); // Ẩn màn hình chào
             chatHistoryContainer.innerHTML = "";
             sessionHistory.forEach(item => {
                 const block = document.createElement('div');
-                block.className = 'log-block';
+                block.className = 'mb-8 pb-6 border-b border-gray-100 last:border-0';
                 block.innerHTML = `
-                    <div class="log-prompt">🙋‍♂️ ${item.prompt}</div>
-                    <div class="log-response markdown-body">${marked.parse(item.response)}</div>
+                    <div class="bg-blue-50/50 p-4 rounded-2xl rounded-tr-sm border border-blue-100/50 text-gray-800 font-medium mb-5 text-[15px] whitespace-pre-wrap flex gap-3 shadow-sm">
+                        <span class="material-symbols-rounded text-primary flex-shrink-0 mt-0.5">person</span>
+                        <div class="leading-relaxed">${item.prompt}</div>
+                    </div>
+                    <div class="markdown-body !text-[15px] leading-relaxed text-gray-800">
+                        ${marked.parse(item.response)}
+                    </div>
                 `;
                 chatHistoryContainer.appendChild(block);
             });
-            // Cuộn xuống cuối
+            // Cuộn xuống
             document.getElementById('main-content').scrollTop = document.getElementById('main-content').scrollHeight;
         }
 
-        // Logic thao tác nhanh (Quick Actions)
+        // --- QUICK ACTIONS ---
         document.getElementById('btnNextStep').addEventListener('click', () => {
             promptInput.value = "Tôi đã hoàn thành bước vừa rồi. Hãy tiếp tục hướng dẫn tôi bước tiếp theo.";
             sendPromptButton.click();
@@ -814,35 +599,37 @@
         document.getElementById('btnGotBug').addEventListener('click', () => {
             promptInput.value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n[DÁN MÃ LỖI VÀO ĐÂY]";
             promptInput.focus();
-            // Nếu trên Mobile, tự mở lại sidebar để gõ lỗi
-            if(window.innerWidth <= 850 && !document.getElementById('sidebar').classList.contains('open')) {
+            if(window.innerWidth <= 768 && !document.getElementById('sidebar').classList.contains('open')) {
                 toggleSidebar();
             }
         });
 
-        // Logic ẩn hiện Sidebar cho Mobile
+        // --- SIDEBAR MOBILE ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
 
         function toggleSidebar() {
             sidebar.classList.toggle('open');
-            overlay.classList.toggle('show');
+            if(sidebar.classList.contains('open')) {
+                overlay.classList.remove('hidden');
+                setTimeout(() => overlay.classList.add('opacity-100'), 10);
+            } else {
+                overlay.classList.remove('opacity-100');
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+            }
         }
         menuToggle.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
 
-        function updateStatus(type, message) {
-            statusMessage.className = `status-message ${type}`;
-            statusMessage.textContent = message;
-            if (type === 'info-text') {
-                statusMessage.innerHTML = message; // Cho phép thẻ <br> hoạt động
-            }
+        // --- HELPERS & AI ---
+        function updateStatus(colorClass, message) {
+            statusMessage.className = `text-xs text-center font-medium mt-1 px-2 transition-colors ${colorClass}`;
+            statusMessage.innerHTML = message; 
         }
 
-        updateStatus('info-text', "Firebase App đã khởi tạo.<br>Đang chờ mô hình AI...");
+        updateStatus('text-blue-600', "Firebase App khởi tạo.<br>Đang chờ mô hình AI...");
 
-        // Cấu hình Marked.js tích hợp với Highlight.js để tô màu code
         marked.setOptions({
             highlight: function(code, lang) {
                 const language = hljs.getLanguage(lang) ? lang : 'plaintext';
@@ -860,7 +647,6 @@ Never skip steps.
 Never assume prior knowledge.
 
 For every repository, always follow this structure:
-
 1. Explain what problem this repository solves.
 2. Explain the big picture architecture.
 3. Show the file structure and which file to start with.
@@ -880,15 +666,10 @@ Rules:
         let model;
         try {
             const ai = getAI(app, { backend: new GoogleAIBackend() });
-            model = getGenerativeModel(ai, { 
-                model: "gemini-2.5-flash",
-                systemInstruction: systemPrompt
-            });
-            console.log("Generative Model instance created with model 'gemini-2.5-flash' and System Instruction!");
-            updateStatus('success-text', "AI Tutor đã sẵn sàng. Hãy chọn một mẫu bên trên.");
+            model = getGenerativeModel(ai, { model: "gemini-2.5-flash", systemInstruction: systemPrompt });
+            updateStatus('text-green-600', "AI Tutor đã sẵn sàng.");
         } catch (e) {
-            console.error("Lỗi khi khởi tạo AI Model:", e);
-            updateStatus('error-text', `Lỗi khởi tạo AI Model: ${e.message}.<br>Kiểm tra Console (F12).`);
+            updateStatus('text-red-600', `Lỗi AI: ${e.message}`);
         }
 
         const templates = {
@@ -903,89 +684,59 @@ Rules:
             activeTemplateType = type; 
             promptInput.value = templates[type];
             promptInput.focus();
-            
-            if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
-                // toggleSidebar(); 
-            }
+            if(window.innerWidth <= 768 && sidebar.classList.contains('open')) { /* toggleSidebar(); */ }
         };
 
         async function callGeminiAPI() {
-            if (!model) {
-                updateStatus('error-text', "Mô hình AI chưa được khởi tạo. Vui lòng thử tải lại trang.");
-                return;
-            }
-
+            if (!model) return updateStatus('text-red-600', "Mô hình AI lỗi.");
             const promptText = promptInput.value.trim();
-            if (!promptText) {
-                updateStatus('error-text', "Vui lòng nhập lời nhắc hoặc dán link trước!");
-                return;
-            }
+            if (!promptText) return updateStatus('text-red-600', "Vui lòng nhập lời nhắc!");
 
-            updateStatus('info-text', "Đang gửi yêu cầu đến Gemini...");
+            updateStatus('text-blue-600', "Đang gửi yêu cầu...");
             
-            // Hiện loading indicator bên dưới cùng
             quickActions.classList.add('hidden');
-            if (sessionHistory.length === 0) chatHistoryContainer.innerHTML = ""; // Xóa dòng chào mừng
+            emptyStateContainer.classList.add('hidden');
             loadingIndicator.classList.remove('hidden');
 
             buttonText.textContent = 'Đang xử lý...';
             buttonSpinner.classList.remove('hidden');
             sendPromptButton.disabled = true;
 
-            if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
-                toggleSidebar();
-            }
+            if(window.innerWidth <= 768 && sidebar.classList.contains('open')) toggleSidebar();
 
             let finalPrompt = promptText;
             if (currentRepoIndex !== "" && activeTemplateType !== 'explain') {
                 finalPrompt = `[NGỮ CẢNH DỰ ÁN TỪ PAGE INDEX ĐÃ LƯU]:\n${currentRepoIndex}\n\n`;
-                
-                // Lấy câu trả lời cuối cùng để làm ngữ cảnh
                 if (sessionHistory.length > 0) {
                     finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${sessionHistory[sessionHistory.length - 1].response}\n\n`;
                 }
-
                 finalPrompt += `---\n[YÊU CẦU MỚI CỦA TÔI]:\n${promptText}`;
             }
 
             try {
                 const result = await model.generateContent(finalPrompt);
-                const response = result.response;
-                const text = response.text();
+                const text = result.response.text();
 
                 if (activeTemplateType === 'explain') {
                     currentRepoIndex = text;
                     document.getElementById('repoContextBadge').classList.remove('hidden');
                 }
 
-                // Push vào mảng lịch sử phiên
-                sessionHistory.push({
-                    prompt: promptText,
-                    response: text
-                });
-
-                // Xóa input sau khi gửi thành công
+                sessionHistory.push({ prompt: promptText, response: text });
                 promptInput.value = "";
 
-                // Vẽ lại giao diện và tự động lưu
                 loadingIndicator.classList.add('hidden');
                 renderChatHistory();
                 autoSaveRepo();
                 
-                if (activeTemplateType === 'explain') {
-                    updateStatus('success-text', "Đã nhận phản hồi. 📌 Hệ thống đã tự động lưu dự án!");
-                } else {
-                    updateStatus('success-text', "Đã lưu tiếp tiến trình học.");
-                }
-
+                updateStatus('text-green-600', activeTemplateType === 'explain' ? "📌 Đã tự động lưu dự án!" : "Đã lưu tiến trình.");
                 activeTemplateType = "custom";
                 quickActions.classList.remove('hidden');
 
             } catch (error) {
-                console.error("Lỗi khi gọi Gemini API:", error);
                 loadingIndicator.classList.add('hidden');
-                updateStatus('error-text', `Lỗi: ${error.message}.`);
-                alert("Lỗi khi gọi API: " + error.message);
+                updateStatus('text-red-600', `Lỗi: ${error.message}.`);
+                alert("Lỗi gọi API: " + error.message);
             } finally {
                 buttonText.textContent = 'Gửi tới Gemini';
                 buttonSpinner.classList.add('hidden');
@@ -993,9 +744,7 @@ Rules:
             }
         }
 
-        if (sendPromptButton) {
-            sendPromptButton.addEventListener("click", callGeminiAPI);
-        }
+        if (sendPromptButton) sendPromptButton.addEventListener("click", callGeminiAPI);
     </script>
 </body>
 </html>
