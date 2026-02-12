@@ -509,7 +509,7 @@
     <!-- Modal Nhập liệu (Prompt) -->
     <div id="promptModal" class="custom-modal-overlay">
         <div class="custom-modal">
-            <div class="custom-modal-title" id="promptTitle">Nhập thông বার্ত</div>
+            <div class="custom-modal-title" id="promptTitle">Nhập thông tin</div>
             <input type="text" id="promptInputVal" class="custom-modal-input" autocomplete="off">
             <div class="custom-modal-actions">
                 <button class="modal-btn modal-btn-cancel" onclick="closeModal('promptModal')">Hủy</button>
@@ -534,6 +534,24 @@
     </div>
 
     <script type="module">
+        // --- BẮT ĐẦU: SỬA LỖI AbortSignal.any ---
+        // Polyfill cho AbortSignal.any nhằm hỗ trợ các trình duyệt/môi trường thiếu hàm này
+        // (Đây là nguyên nhân gây ra lỗi "AbortSignal.any is not a function" trên Firebase SDK 12.9.0)
+        if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
+            AbortSignal.any = function(signals) {
+                const controller = new AbortController();
+                for (const signal of signals) {
+                    if (signal.aborted) {
+                        controller.abort(signal.reason);
+                        return controller.signal;
+                    }
+                    signal.addEventListener('abort', () => controller.abort(signal.reason), { once: true });
+                }
+                return controller.signal;
+            };
+        }
+        // --- KẾT THÚC: SỬA LỖI AbortSignal.any ---
+
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/12.9.0/firebase-firestore.js";
