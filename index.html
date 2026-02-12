@@ -369,6 +369,12 @@
                 </div>
             </div>
             <div class="flex items-center gap-2">
+                <!-- NÚT MỚI: YÊU CẦU KIẾN THỨC -->
+                <button onclick="openPrerequisitesModal()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-yellow-700 bg-yellow-50 hover:bg-yellow-100 border border-yellow-200 rounded-lg transition-colors shadow-sm" title="Xem kiến thức & công cụ cần chuẩn bị">
+                    <span class="material-symbols-rounded text-[16px] text-yellow-600">lightbulb</span>
+                    <span class="hidden md:inline">Kiến thức cần có</span>
+                </button>
+                
                 <!-- Nút Tạo Lại Giáo Án Mới -->
                 <button onclick="regenerateTutorPlan()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-orange-600 bg-orange-50 hover:bg-orange-100 border border-orange-200 rounded-lg transition-colors shadow-sm" title="Tạo lại giáo án nếu nội dung AI sinh ra không chuẩn">
                     <span class="material-symbols-rounded text-[16px]">refresh</span>
@@ -419,6 +425,36 @@
     <!-- ============================================== -->
 
     <!-- CÁC MODALS PHỤ -->
+    
+    <!-- MODAL MỚI: KIẾN THỨC CẦN CHUẨN BỊ -->
+    <div id="prerequisitesModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/60 z-[3000] flex items-center justify-center backdrop-blur-sm">
+        <div class="custom-modal bg-white rounded-2xl p-0 w-[90%] max-w-lg shadow-2xl border border-gray-100 overflow-hidden flex flex-col max-h-[85vh]">
+            <!-- Modal Header -->
+            <div class="bg-gradient-to-r from-yellow-50 to-amber-50 p-5 border-b border-amber-100 flex items-center gap-3">
+                <div class="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm">
+                    <span class="material-symbols-rounded text-amber-500 text-xl">lightbulb</span>
+                </div>
+                <div>
+                    <h3 class="font-display text-lg font-semibold text-amber-900">Hành trang cần chuẩn bị</h3>
+                    <p class="text-xs text-amber-700">Những kiến thức & công cụ cần có trước khi bắt đầu</p>
+                </div>
+            </div>
+            
+            <!-- Modal Body (Markdown) -->
+            <div class="p-6 overflow-y-auto markdown-body !text-[14.5px]" id="prerequisitesContent">
+                <!-- Nội dung AI sinh ra sẽ nằm ở đây -->
+            </div>
+            
+            <!-- Modal Footer -->
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-end">
+                <button onclick="closePrerequisitesModal()" class="px-6 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors shadow-sm">
+                    Đã hiểu, bắt đầu thôi!
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
     <div id="confirmModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
         <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <h3 class="font-display text-lg font-medium text-gray-800 mb-2">Xác nhận</h3>
@@ -430,6 +466,7 @@
         </div>
     </div>
 
+    <!-- Prompt Modal -->
     <div id="promptModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
         <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <h3 id="promptTitle" class="font-display text-lg font-medium text-gray-800 mb-4">Nhập thông tin</h3>
@@ -441,7 +478,8 @@
         </div>
     </div>
 
-    <div id="authModal" class="custom-modal-overlay show fixed inset-0 bg-gray-900/60 z-[3000] flex items-center justify-center backdrop-blur-md">
+    <!-- Auth Modal -->
+    <div id="authModal" class="custom-modal-overlay show fixed inset-0 bg-gray-900/60 z-[4000] flex items-center justify-center backdrop-blur-md">
         <div class="custom-modal bg-white rounded-3xl p-8 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <div class="text-center mb-8">
                 <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary">
@@ -516,8 +554,10 @@
         // Biến lưu Repo Path cho File Explorer
         let currentGithubRepoPath = ""; 
 
+        // Biến lưu trữ Giáo án và Kiến thức
         let tutorSteps = [];
         let currentTutorStepIndex = 0;
+        let tutorPrerequisites = ""; // Lưu kiến thức cần có (Dạng Markdown)
 
         const emptyStateContainer = document.getElementById('emptyStateContainer');
         const chatHistoryContainer = document.getElementById('chatHistoryContainer');
@@ -551,6 +591,7 @@
             // Xóa state của giáo án
             tutorSteps = [];
             currentTutorStepIndex = 0;
+            tutorPrerequisites = "";
             btnResumeTutor.classList.add('hidden');
             btnResumeTutor.classList.remove('flex');
             
@@ -667,6 +708,7 @@
                 // Phục hồi trạng thái giáo án từ Firestore (nếu có)
                 tutorSteps = repo.tutorSteps || [];
                 currentTutorStepIndex = repo.currentTutorStepIndex || 0;
+                tutorPrerequisites = repo.tutorPrerequisites || ""; // Khôi phục cả hành trang
                 
                 renderChatHistory(); 
                 
@@ -740,8 +782,9 @@
                         repoIndex: currentRepoIndex, 
                         githubPath: currentGithubRepoPath,
                         history: sessionHistory, 
-                        tutorSteps: tutorSteps,                     // Lưu mảng giáo án
-                        currentTutorStepIndex: currentTutorStepIndex, // Lưu tiến độ
+                        tutorSteps: tutorSteps,                     
+                        currentTutorStepIndex: currentTutorStepIndex,
+                        tutorPrerequisites: tutorPrerequisites,     // Lưu kiến thức cần có
                         updatedAt: new Date().getTime()
                     });
                     loadHistory();
@@ -752,8 +795,9 @@
                     repoIndex: currentRepoIndex, 
                     githubPath: currentGithubRepoPath,
                     history: sessionHistory, 
-                    tutorSteps: tutorSteps,                     // Update mảng giáo án
-                    currentTutorStepIndex: currentTutorStepIndex, // Update tiến độ
+                    tutorSteps: tutorSteps,                     
+                    currentTutorStepIndex: currentTutorStepIndex,
+                    tutorPrerequisites: tutorPrerequisites,     // Cập nhật kiến thức cần có
                     updatedAt: new Date().getTime()
                 }, { merge: true }); 
                 loadHistory();
@@ -993,6 +1037,21 @@
             setTimeout(() => sendPromptButton.click(), 300); 
         });
 
+        // --- LOGIC MODAL: KIẾN THỨC CẦN CHUẨN BỊ (NEW) ---
+        window.openPrerequisitesModal = function() {
+            // Kiểm tra xem có nội dung không, nếu không có thì báo lỗi nhẹ
+            const content = tutorPrerequisites && tutorPrerequisites.trim() !== "" 
+                ? tutorPrerequisites 
+                : "Không có yêu cầu đặc biệt nào được gợi ý cho dự án này.";
+            
+            document.getElementById('prerequisitesContent').innerHTML = marked.parse(content);
+            document.getElementById('prerequisitesModal').classList.add('show');
+        };
+
+        window.closePrerequisitesModal = function() {
+            document.getElementById('prerequisitesModal').classList.remove('show');
+        };
+
         // --- CÁC HÀM XỬ LÝ GIA SƯ TỪNG BƯỚC (TUTOR) ---
         function parseTutorSteps(text) {
             const steps = [];
@@ -1017,11 +1076,18 @@
             setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
         }
 
-        function openTutorModal() {
+        function openTutorModal(isFirstTime = false) {
             const modal = document.getElementById('tutorModal');
             modal.classList.remove('hidden'); modal.classList.add('flex');
             setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
             renderTutorStep();
+            
+            // Nếu là lần đầu tiên tạo giáo án, tự động bật bảng Kiến Thức Cần Có lên
+            if (isFirstTime) {
+                setTimeout(() => {
+                    openPrerequisitesModal();
+                }, 400); // Đợi modal Tutor lên xong thì mới bật đè modal Tips lên
+            }
         }
         
         // Cầu nối Tạo lại Giáo án
@@ -1101,7 +1167,10 @@
 
         const templates = {
             explain: "Hãy đóng vai một chuyên gia lập trình. Đọc repository dưới đây và tạo ra một bản tóm tắt kiến trúc dự án, luồng hoạt động chính và các file quan trọng. Giải thích cho tôi hiểu như một người mới bắt đầu.\n\n[DÁN LINK GITHUB HOẶC MÃ NGUỒN VÀO ĐÂY]",
-            tutor: "Hãy tạo một lộ trình giáo án thực hành dự án này. Chia thành các bước nhỏ (tối đa 10 bước). YÊU CẦU BẮT BUỘC: Trả về kết quả CHÍNH XÁC theo định dạng mẫu dưới đây để hệ thống tôi phân tách:\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 1]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 1]\n===STEP_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 2]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 2]\n===STEP_END===\n\n(Tiếp tục cho đến hết. Lưu ý: CHỈ trả về các khối STEP_START và STEP_END, không cần phần chào hỏi).",
+            
+            // Cập nhật Template Tutor để bắt AI phải liệt kê Kiến thức chuẩn bị
+            tutor: "Hãy tạo một lộ trình giáo án thực hành dự án này. Chia thành các bước nhỏ (tối đa 10 bước). \n\nYÊU CẦU 1: Bắt buộc liệt kê các kiến thức, ngôn ngữ, phần mềm hoặc công cụ cần cài đặt trước khi học dự án này. Bọc trong khối PREREQ_START và PREREQ_END như mẫu dưới đây.\n\nYÊU CẦU 2: Trả về kết quả CHÍNH XÁC theo định dạng mẫu dưới đây để hệ thống tôi phân tách:\n\n===PREREQ_START===\n[Liệt kê chi tiết các công cụ, ngôn ngữ, IDE cần thiết để chạy dự án]\n===PREREQ_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 1]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 1]\n===STEP_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 2]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 2]\n===STEP_END===\n\n(Tiếp tục cho đến hết. Lưu ý: CHỈ trả về các khối PREREQ và STEP, không cần phần chào hỏi).",
+            
             debug: "Tôi nhận được thông báo lỗi này trong quá trình làm. Hãy giải thích bằng ngôn ngữ đơn giản tại sao lại bị lỗi và cách khắc phục.\n[DÁN LOG LỖI VÀO ĐÂY]",
             customize: "Tôi muốn tùy chỉnh dự án này cho mục đích cá nhân của mình:\n[ĐIỀN MỤC TIÊU CỦA BẠN VÀO ĐÂY]\n\nHãy giải thích những gì tôi cần thay đổi trong mã nguồn.",
             deploy: "Hãy hướng dẫn tôi cách triển khai (deploy) dự án này lên mạng.\nCứ giả định rằng tôi chưa từng deploy bất cứ thứ gì trước đây.\nHãy giải thích cặn kẽ từng bước."
@@ -1135,11 +1204,22 @@
                 const text = result.response.text();
 
                 if (activeTemplateType === 'tutor') {
+                    // Trích xuất "Kiến thức cần chuẩn bị"
+                    const prereqMatch = text.match(/===PREREQ_START===([\s\S]*?)===PREREQ_END===/);
+                    if (prereqMatch) {
+                        tutorPrerequisites = prereqMatch[1].trim();
+                    } else {
+                        tutorPrerequisites = "Không có yêu cầu đặc biệt nào được AI gợi ý.";
+                    }
+
+                    // Trích xuất các bước
                     const parsedSteps = parseTutorSteps(text);
                     if (parsedSteps.length > 0) {
                         tutorSteps = parsedSteps; currentTutorStepIndex = 0;
                         sessionHistory.push({ prompt: "Yêu cầu AI lập giáo án hướng dẫn từng bước...", response: `✅ **Đã tạo thành công lộ trình gồm ${tutorSteps.length} bước.**\n\nHệ thống đã mở cửa sổ Gia sư chuyên dụng để hướng dẫn bạn thực hành.` });
-                        openTutorModal();
+                        
+                        // Mở cửa sổ Gia sư kèm cờ "isFirstTime" = true để kích hoạt bảng Kiến thức cần có
+                        openTutorModal(true);
                         
                         btnResumeTutor.classList.remove('hidden');
                         btnResumeTutor.classList.add('flex');
