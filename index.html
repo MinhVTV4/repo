@@ -581,12 +581,36 @@
             });
         };
 
+        // Hàm trích xuất tên thông minh từ câu lệnh người dùng
+        function extractDefaultTitle(promptText) {
+            // 1. Ưu tiên tìm link GitHub (vd: github.com/user/repo)
+            const githubRegex = /github\.com\/([^/\s]+\/[^/\s]+)/i;
+            const match = promptText.match(githubRegex);
+            if (match && match[1]) {
+                let repoName = match[1].replace('.git', '');
+                return "Repo: " + repoName;
+            }
+            
+            // 2. Nếu không có link, lấy dòng mã nguồn/thông tin cuối cùng người dùng dán vào
+            const lines = promptText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const lastLine = lines[lines.length - 1];
+            
+            // Bỏ qua các câu lệnh của Template để lấy nội dung thực tế
+            if (lastLine && !lastLine.includes("DÁN LINK") && !lastLine.includes("Hãy đóng vai")) {
+                return "Dự án: " + (lastLine.length > 25 ? lastLine.substring(0, 25) + "..." : lastLine);
+            }
+            
+            return "Dự án Lập trình mới";
+        }
+
         async function autoSaveRepo() {
             if (!auth.currentUser || sessionHistory.length === 0) return;
             const reposRef = collection(db, `users/${auth.currentUser.uid}/repos`);
 
             if (currentRepoId === null) {
-                let defaultTitle = "Dự án: " + sessionHistory[0].prompt.split('\n')[0].substring(0, 25) + "...";
+                // Sử dụng hàm trích xuất thông minh thay vì cắt chuỗi bừa bãi
+                let defaultTitle = extractDefaultTitle(sessionHistory[0].prompt);
+                
                 showCustomPrompt("Đặt tên dự án để lưu lên đám mây:", defaultTitle, async (title) => {
                     if (title.trim() === "") title = defaultTitle;
                     const newRepoRef = doc(reposRef);
