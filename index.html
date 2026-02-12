@@ -303,6 +303,30 @@
         .modal-btn-primary { background: #2da44e; color: white; }
         .modal-btn-primary:hover { background: #2c974b; }
 
+        /* --- NHẬT KÝ HỌC TẬP (SESSION LOGS) --- */
+        .log-block {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px dashed #eaeeef;
+        }
+        .log-prompt {
+            background-color: #f6f8fa;
+            padding: 12px 16px;
+            border-radius: 8px 8px 8px 0;
+            border-left: 4px solid #0969da;
+            color: #24292f;
+            font-weight: 500;
+            margin-bottom: 15px;
+            font-size: 14px;
+            white-space: pre-wrap;
+        }
+        .log-response {
+            /* Kế thừa markdown-body */
+        }
+        .loading-block {
+            display: flex; align-items: center; gap: 10px; color: #57606a; margin-top: 20px;
+        }
+
         /* --- QUICK ACTIONS (THAO TÁC NHANH) --- */
         #quickActions {
             margin-top: 25px;
@@ -426,9 +450,9 @@
 
             <hr style="border: 0; border-top: 1px solid #d0d7de; margin: 20px 0;">
             
-            <div class="section-title">Lịch sử bài học</div>
+            <div class="section-title">Các dự án đã học</div>
             <div id="historyList">
-                <div style="font-size: 13px; color: #57606a;">Chưa có bài học nào được lưu.</div>
+                <div style="font-size: 13px; color: #57606a;">Chưa có dự án nào.</div>
             </div>
         </div>
     </div>
@@ -436,11 +460,15 @@
     <!-- CỘT PHẢI: Khung hiển thị nội dung -->
     <div id="main-content">
         <div id="responseContainer" class="markdown-body">
-            <button id="saveLessonBtn" class="save-btn hidden">💾 Lưu bài học này</button>
-            <div id="responseContent">
+            <!-- XÓA NÚT LƯU THỦ CÔNG, THAY BẰNG CONTAINER CHỨA LỊCH SỬ -->
+            <div id="chatHistoryContainer">
                 <div class="placeholder-text">
                     Xin chào! <br><br>Hãy dán một đường dẫn GitHub hoặc nhập lời nhắc ở cột bên trái để bắt đầu buổi học.
                 </div>
+            </div>
+            
+            <div id="loadingIndicator" class="loading-block hidden">
+                <div class="spinner" style="border-left-color: #0969da; border-width: 3px;"></div> Đang phân tích dữ liệu...
             </div>
             
             <!-- Thanh thao tác nhanh (Mặc định ẩn) -->
@@ -498,23 +526,28 @@
         const responseContainer = document.getElementById('responseContainer');
         const statusMessage = document.getElementById('statusMessage');
 
-        // --- CÁC BIẾN & LOGIC CHO TÍNH NĂNG LƯU TRỮ (INDEXEDDB) ---
-        let currentPromptText = "";
-        let currentResponseText = "";
+        // --- CÁC BIẾN & LOGIC CHO TÍNH NĂNG LƯU TRỮ (INDEXEDDB - VERSION 2) ---
+        let currentRepoId = null; // ID của Repo đang học trong Database
+        let sessionHistory = []; // Mảng chứa toàn bộ lịch sử [ {prompt, response} ]
         let currentRepoIndex = ""; // Biến lưu trữ Page Index (Ngữ cảnh của Repo)
         let activeTemplateType = "custom"; // Biến theo dõi loại Template đang dùng
 
         window.clearRepoIndex = function() {
+            currentRepoId = null;
             currentRepoIndex = "";
+            sessionHistory = [];
             document.getElementById('repoContextBadge').classList.add('hidden');
-            updateStatus('info-text', "Đã xóa bộ nhớ về dự án hiện tại.");
             document.getElementById('quickActions').classList.add('hidden');
+            document.getElementById('chatHistoryContainer').innerHTML = `
+                <div class="placeholder-text">Đã tạo phiên học mới.<br><br>Hãy dán link dự án mới để bắt đầu.</div>
+            `;
+            updateStatus('info-text', "Đã tạo phiên học mới.");
         };
 
-        const saveLessonBtn = document.getElementById('saveLessonBtn');
-        const responseContent = document.getElementById('responseContent');
+        const chatHistoryContainer = document.getElementById('chatHistoryContainer');
         const historyList = document.getElementById('historyList');
         const quickActions = document.getElementById('quickActions');
+        const loadingIndicator = document.getElementById('loadingIndicator');
 
         // --- LOGIC CUSTOM MODAL ---
         window.closeModal = function(modalId) {
@@ -554,7 +587,7 @@
         }
 
         const dbName = "AITutorDB";
-        const dbVersion = 1;
+        const dbVersion = 2; // Nâng cấp version để đổi cấu trúc bảng
         let db;
 
         function initDB() {
@@ -562,59 +595,67 @@
             request.onerror = (event) => console.error("Lỗi mở IndexedDB", event);
             request.onsuccess = (event) => {
                 db = event.target.result;
-                loadHistory(); // Tải lịch sử ngay khi mở web
+                loadHistory(); 
             };
             request.onupgradeneeded = (event) => {
                 db = event.target.result;
-                const objectStore = db.createObjectStore("lessons", { keyPath: "id", autoIncrement: true });
-                objectStore.createIndex("timestamp", "timestamp", { unique: false });
+                // Tạo bảng lưu trữ theo dạng Mảng Repo (Thay vì từng tin nhắn)
+                if (!db.objectStoreNames.contains("repos")) {
+                    const objectStore = db.createObjectStore("repos", { keyPath: "id", autoIncrement: true });
+                    objectStore.createIndex("updatedAt", "updatedAt", { unique: false });
+                }
             };
         }
         initDB();
 
         function loadHistory() {
             if (!db) return;
-            const transaction = db.transaction(["lessons"], "readonly");
-            const store = transaction.objectStore("lessons");
+            const transaction = db.transaction(["repos"], "readonly");
+            const store = transaction.objectStore("repos");
             const request = store.getAll();
             
             request.onsuccess = () => {
-                const lessons = request.result.sort((a, b) => b.timestamp - a.timestamp); // Xếp mới nhất lên đầu
+                const repos = request.result.sort((a, b) => b.updatedAt - a.updatedAt);
                 historyList.innerHTML = "";
-                if (lessons.length === 0) {
-                    historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Chưa có bài học nào được lưu.</div>';
+                if (repos.length === 0) {
+                    historyList.innerHTML = '<div style="font-size: 13px; color: #57606a;">Chưa có dự án nào được học.</div>';
                     return;
                 }
                 
-                lessons.forEach(lesson => {
-                    const dateStr = new Date(lesson.timestamp).toLocaleString('vi-VN');
+                repos.forEach(repo => {
+                    const dateStr = new Date(repo.updatedAt).toLocaleString('vi-VN');
                     const item = document.createElement('div');
                     item.className = 'history-item';
                     item.innerHTML = `
-                        <div style="overflow: hidden; flex-grow: 1;" onclick="viewLesson(${lesson.id})">
-                            <div class="history-title">${lesson.title}</div>
-                            <div class="history-date">${dateStr}</div>
+                        <div style="overflow: hidden; flex-grow: 1;" onclick="viewRepo(${repo.id})">
+                            <div class="history-title">${repo.title}</div>
+                            <div class="history-date">${repo.history.length} bài giảng • ${dateStr}</div>
                         </div>
-                        <button class="delete-btn" onclick="deleteLesson(${lesson.id}, event)" title="Xóa bài này">🗑️</button>
+                        <button class="delete-btn" onclick="deleteRepo(${repo.id}, event)" title="Xóa dự án này">🗑️</button>
                     `;
                     historyList.appendChild(item);
                 });
             };
         }
 
-        window.viewLesson = function(id) {
-            const transaction = db.transaction(["lessons"], "readonly");
-            const store = transaction.objectStore("lessons");
+        window.viewRepo = function(id) {
+            const transaction = db.transaction(["repos"], "readonly");
+            const store = transaction.objectStore("repos");
             const request = store.get(id);
             request.onsuccess = () => {
                 if(request.result) {
-                    const lesson = request.result;
-                    promptInput.value = lesson.prompt;
-                    responseContent.innerHTML = marked.parse(lesson.content);
-                    currentPromptText = lesson.prompt;
-                    currentResponseText = lesson.content;
-                    saveLessonBtn.classList.add('hidden'); // Ẩn nút lưu vì đây là bài cũ
-                    updateStatus('info-text', `Đang xem lại bài học: ${lesson.title}`);
+                    const repo = request.result;
+                    currentRepoId = repo.id;
+                    currentRepoIndex = repo.repoIndex || "";
+                    sessionHistory = repo.history || [];
+                    
+                    renderChatHistory(); // Render lại toàn bộ phiên học ra màn hình
+                    
+                    if (currentRepoIndex !== "") {
+                        document.getElementById('repoContextBadge').classList.remove('hidden');
+                    }
+                    quickActions.classList.remove('hidden');
+                    updateStatus('info-text', `Đang tiếp tục học dự án: ${repo.title}`);
                     
                     // Đóng sidebar trên mobile
                     if(window.innerWidth <= 850 && document.getElementById('sidebar').classList.contains('open')) {
@@ -625,49 +666,76 @@
             };
         };
 
-        window.deleteLesson = function(id, event) {
+        window.deleteRepo = function(id, event) {
             event.stopPropagation();
-            
-            // Dùng Custom Confirm Modal thay cho confirm()
-            showCustomConfirm("Bạn có chắc chắn muốn xóa bài học này khỏi lịch sử?", () => {
-                const transaction = db.transaction(["lessons"], "readwrite");
-                const store = transaction.objectStore("lessons");
+            showCustomConfirm("Xóa toàn bộ tiến trình học của dự án này?", () => {
+                const transaction = db.transaction(["repos"], "readwrite");
+                const store = transaction.objectStore("repos");
                 const request = store.delete(id);
                 request.onsuccess = () => {
+                    if (currentRepoId === id) clearRepoIndex(); // Reset nếu đang mở dự án bị xóa
                     loadHistory();
-                    updateStatus('success-text', "Đã xóa bài học thành công.");
+                    updateStatus('success-text', "Đã xóa dự án.");
                 };
             });
         };
 
-        if (saveLessonBtn) {
-            saveLessonBtn.addEventListener('click', () => {
-                if (!db || !currentResponseText) return;
-                
-                // Gợi ý tên tự động từ nội dung lời nhắc
-                let defaultTitle = currentPromptText.split('\n')[0].substring(0, 35) + "...";
-                
-                // Dùng Custom Prompt Modal thay cho prompt()
-                showCustomPrompt("Nhập tên để lưu bài học này:", defaultTitle, (title) => {
-                    if (title.trim() === "") title = defaultTitle;
+        // HÀM AUTO-SAVE (LƯU TỰ ĐỘNG)
+        function autoSaveRepo() {
+            if (!db || sessionHistory.length === 0) return;
+            
+            const transaction = db.transaction(["repos"], "readwrite");
+            const store = transaction.objectStore("repos");
 
-                    const transaction = db.transaction(["lessons"], "readwrite");
-                    const store = transaction.objectStore("lessons");
-                    const lesson = {
+            // Nếu là dự án mới tinh, gợi ý đặt tên
+            if (currentRepoId === null) {
+                let defaultTitle = "Dự án: " + sessionHistory[0].prompt.split('\n')[0].substring(0, 30) + "...";
+                showCustomPrompt("Đặt tên cho dự án này để lưu trữ:", defaultTitle, (title) => {
+                    if (title.trim() === "") title = defaultTitle;
+                    
+                    const newRepo = {
                         title: title,
-                        prompt: currentPromptText,
-                        content: currentResponseText,
-                        timestamp: new Date().getTime()
+                        repoIndex: currentRepoIndex,
+                        history: sessionHistory,
+                        updatedAt: new Date().getTime()
                     };
                     
-                    const request = store.add(lesson);
-                    request.onsuccess = () => {
-                        updateStatus('success-text', "Đã lưu vào bộ nhớ trình duyệt!");
-                        saveLessonBtn.classList.add('hidden');
+                    const request = store.add(newRepo);
+                    request.onsuccess = (e) => {
+                        currentRepoId = e.target.result; // Lưu lại ID tự tăng
                         loadHistory();
                     };
                 });
+            } else {
+                // Đã có dự án, chỉ cần Update thêm mảng history
+                const getReq = store.get(currentRepoId);
+                getReq.onsuccess = () => {
+                    let repoData = getReq.result;
+                    if (repoData) {
+                        repoData.history = sessionHistory;
+                        repoData.repoIndex = currentRepoIndex;
+                        repoData.updatedAt = new Date().getTime();
+                        store.put(repoData);
+                        loadHistory();
+                    }
+                };
+            }
+        }
+
+        // Hàm vẽ toàn bộ lịch sử ra màn hình
+        function renderChatHistory() {
+            chatHistoryContainer.innerHTML = "";
+            sessionHistory.forEach(item => {
+                const block = document.createElement('div');
+                block.className = 'log-block';
+                block.innerHTML = `
+                    <div class="log-prompt">🙋‍♂️ ${item.prompt}</div>
+                    <div class="log-response markdown-body">${marked.parse(item.response)}</div>
+                `;
+                chatHistoryContainer.appendChild(block);
             });
+            // Cuộn xuống cuối
+            document.getElementById('main-content').scrollTop = document.getElementById('main-content').scrollHeight;
         }
 
         // Logic thao tác nhanh (Quick Actions)
@@ -765,13 +833,12 @@ Rules:
         };
 
         window.setTemplate = function(type) {
-            activeTemplateType = type; // Ghi nhận loại template người dùng vừa bấm
+            activeTemplateType = type; 
             promptInput.value = templates[type];
             promptInput.focus();
             
-            // Nếu đang dùng Mobile, tự động đóng sidebar sau khi chọn template để xem trước
             if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
-                // toggleSidebar(); // Có thể mở comment dòng này nếu muốn tự đóng
+                // toggleSidebar(); 
             }
         };
 
@@ -789,77 +856,69 @@ Rules:
 
             updateStatus('info-text', "Đang gửi yêu cầu đến Gemini...");
             
-            // Loading Animation
-            saveLessonBtn.classList.add('hidden');
-            quickActions.classList.add('hidden'); // Ẩn nút thao tác nhanh khi đang load
-            responseContent.innerHTML = '<div class="large-spinner"></div><div>Đang phân tích dữ liệu...</div>';
-            responseContainer.classList.add('loading');
+            // Hiện loading indicator bên dưới cùng
+            quickActions.classList.add('hidden');
+            if (sessionHistory.length === 0) chatHistoryContainer.innerHTML = ""; // Xóa dòng chào mừng
+            loadingIndicator.classList.remove('hidden');
 
             buttonText.textContent = 'Đang xử lý...';
             buttonSpinner.classList.remove('hidden');
             sendPromptButton.disabled = true;
 
-            // Tự động đóng sidebar trên mobile khi bắt đầu chạy
             if(window.innerWidth <= 850 && sidebar.classList.contains('open')) {
                 toggleSidebar();
             }
 
-            // --- XỬ LÝ KẸP PAGE INDEX VÀO LỜI NHẮC ---
             let finalPrompt = promptText;
-            // Nếu đã có Index và người dùng không phải đang muốn tạo Index mới
             if (currentRepoIndex !== "" && activeTemplateType !== 'explain') {
                 finalPrompt = `[NGỮ CẢNH DỰ ÁN TỪ PAGE INDEX ĐÃ LƯU]:\n${currentRepoIndex}\n\n`;
                 
-                // [NÂNG CẤP BỘ NHỚ]: Thêm đoạn phản hồi gần nhất để AI biết mình vừa dạy đến bước nào
-                if (currentResponseText !== "") {
-                    finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${currentResponseText}\n\n`;
+                // Lấy câu trả lời cuối cùng để làm ngữ cảnh
+                if (sessionHistory.length > 0) {
+                    finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${sessionHistory[sessionHistory.length - 1].response}\n\n`;
                 }
 
                 finalPrompt += `---\n[YÊU CẦU MỚI CỦA TÔI]:\n${promptText}`;
             }
 
             try {
-                // Gửi finalPrompt thay vì promptText thô
                 const result = await model.generateContent(finalPrompt);
                 const response = result.response;
                 const text = response.text();
 
-                // Lưu trữ vào biến tạm để dùng khi người dùng ấn nút "Lưu bài học"
-                currentPromptText = promptText; 
-                currentResponseText = text;
-
-                // Nếu đang chạy lệnh "Giải thích Repo", lưu kết quả làm Page Index
                 if (activeTemplateType === 'explain') {
                     currentRepoIndex = text;
                     document.getElementById('repoContextBadge').classList.remove('hidden');
                 }
 
-                // Render Markdown sang HTML
-                responseContent.innerHTML = marked.parse(text);
-                responseContainer.classList.remove('loading');
+                // Push vào mảng lịch sử phiên
+                sessionHistory.push({
+                    prompt: promptText,
+                    response: text
+                });
+
+                // Xóa input sau khi gửi thành công
+                promptInput.value = "";
+
+                // Vẽ lại giao diện và tự động lưu
+                loadingIndicator.classList.add('hidden');
+                renderChatHistory();
+                autoSaveRepo();
                 
-                // Hiển thị thông báo tương ứng
                 if (activeTemplateType === 'explain') {
-                    updateStatus('success-text', "Đã nhận phản hồi. 📌 Hệ thống đã GHI NHỚ cấu trúc dự án này cho các câu hỏi sau!");
+                    updateStatus('success-text', "Đã nhận phản hồi. 📌 Hệ thống đã tự động lưu dự án!");
                 } else {
-                    updateStatus('success-text', "Đã nhận phản hồi thành công.");
+                    updateStatus('success-text', "Đã lưu tiếp tiến trình học.");
                 }
 
-                // Trả activeTemplateType về custom để nếu chat tự do vẫn dùng Index
                 activeTemplateType = "custom";
-                
-                // Hiện nút Save và Quick Actions
-                saveLessonBtn.classList.remove('hidden');
                 quickActions.classList.remove('hidden');
-                
-                // Cuộn lên đầu kết quả mới
-                document.getElementById('main-content').scrollTop = 0;
 
             } catch (error) {
                 console.error("Lỗi khi gọi Gemini API:", error);
-                responseContent.innerHTML = `<h3 style="color:#cf222e;">Đã xảy ra lỗi:</h3><p>${error.message}</p><p>Vui lòng kiểm tra Console (F12) để biết thêm chi tiết.</p>`;
-                responseContainer.classList.remove('loading');
+                loadingIndicator.classList.add('hidden');
                 updateStatus('error-text', `Lỗi: ${error.message}.`);
+                alert("Lỗi khi gọi API: " + error.message);
             } finally {
                 buttonText.textContent = 'Gửi tới Gemini';
                 buttonSpinner.classList.add('hidden');
