@@ -333,10 +333,10 @@
                 </div>
             </div>
 
-            <!-- Right Panel: Code Viewer -->
-            <div class="flex-1 h-[60%] md:h-full flex flex-col bg-[#0d1117] relative">
-                <div class="h-12 border-b border-gray-800 bg-[#161b22] flex items-center justify-between px-4">
-                    <div class="flex items-center gap-2 text-sm text-gray-300 font-medium" id="codeViewerTitle">
+            <!-- Right Panel: Code Viewer (ĐÃ ĐƯỢC CHUYỂN SANG LIGHT THEME) -->
+            <div class="flex-1 h-[60%] md:h-full flex flex-col bg-white relative">
+                <div class="h-12 border-b border-gray-200 bg-gray-50 flex items-center justify-between px-4">
+                    <div class="flex items-center gap-2 text-sm text-gray-600 font-medium" id="codeViewerTitle">
                         <span class="material-symbols-rounded text-gray-500 text-[18px]">code</span> Chọn một file để xem
                     </div>
                     <button id="btnExplainFile" class="hidden items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-[13px] font-medium rounded-lg transition-all shadow-sm">
@@ -345,8 +345,8 @@
                 </div>
                 
                 <div class="flex-1 overflow-auto p-4 relative" id="codeViewerContent">
-                    <div class="flex flex-col items-center justify-center h-full text-gray-600">
-                        <span class="material-symbols-rounded text-6xl mb-4 opacity-20">data_object</span>
+                    <div class="flex flex-col items-center justify-center h-full text-gray-400">
+                        <span class="material-symbols-rounded text-6xl mb-4 opacity-30">data_object</span>
                         <p class="text-sm">Mã nguồn sẽ hiển thị tại đây</p>
                     </div>
                 </div>
@@ -826,7 +826,7 @@
                 const preview = codePart.substring(0, 30).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...';
                 
                 return `${instruction}<br><br>
-                <div class="bg-white border border-blue-200 rounded-xl overflow-hidden mt-2 shadow-sm">
+                <div class="bg-white border border-blue-200 rounded-xl overflow-hidden mt-2 shadow-sm w-full">
                     <div class="bg-blue-50 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
                         <div class="flex items-center gap-2 text-blue-700 text-[13px] font-semibold">
                             <span class="material-symbols-rounded text-[18px]">data_object</span>
@@ -1043,7 +1043,7 @@
             titleContainer.innerHTML = `<span class="material-symbols-rounded text-gray-500 text-[18px]">description</span> ${path}`;
             btnExplain.classList.add('hidden'); 
             
-            contentContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-500"><div class="spinner mb-4 !border-gray-600 !border-l-white"></div><p class="text-sm">Đang tải nội dung file...</p></div>`;
+            contentContainer.innerHTML = `<div class="flex flex-col items-center justify-center h-full text-gray-400"><div class="spinner mb-4 !border-gray-300 !border-l-primary"></div><p class="text-sm">Đang tải nội dung file...</p></div>`;
 
             try {
                 const response = await fetch(downloadUrl);
@@ -1067,7 +1067,7 @@
 
                 const highlighted = validLang === 'plaintext' ? hljs.highlightAuto(text).value : hljs.highlight(text, { language: validLang }).value;
 
-                contentContainer.innerHTML = `<pre class="!m-0 !bg-transparent !p-0"><code class="hljs language-${validLang} !text-[#e6edf3] !bg-transparent">${highlighted}</code></pre>`;
+                contentContainer.innerHTML = `<pre class="!m-0 !bg-transparent !p-0"><code class="hljs language-${validLang} !text-gray-800 !bg-transparent">${highlighted}</code></pre>`;
                 btnExplain.classList.remove('hidden');
                 btnExplain.classList.add('flex');
             } catch (error) {
@@ -1084,9 +1084,8 @@
             setTimeout(() => sendPromptButton.click(), 300); 
         });
 
-        // --- LOGIC MODAL: KIẾN THỨC CẦN CHUẨN BỊ (NEW) ---
+        // --- LOGIC MODAL: KIẾN THỨC CẦN CHUẨN BỊ ---
         window.openPrerequisitesModal = function() {
-            // Kiểm tra xem có nội dung không, nếu không có thì báo lỗi nhẹ
             const content = tutorPrerequisites && tutorPrerequisites.trim() !== "" 
                 ? tutorPrerequisites 
                 : "Không có yêu cầu đặc biệt nào được gợi ý cho dự án này.";
@@ -1129,20 +1128,18 @@
             setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
             renderTutorStep();
             
-            // Nếu là lần đầu tiên tạo giáo án, tự động bật bảng Kiến Thức Cần Có lên
             if (isFirstTime) {
                 setTimeout(() => {
                     openPrerequisitesModal();
-                }, 400); // Đợi modal Tutor lên xong thì mới bật đè modal Tips lên
+                }, 400); 
             }
         }
         
-        // Cầu nối Tạo lại Giáo án
         window.regenerateTutorPlan = function() {
             showCustomConfirm("Giáo án cũ sẽ bị xóa. Bạn có muốn AI tạo lại giáo án mới không?", () => {
                 closeTutorModal();
-                setTemplate('tutor'); // Đẩy lệnh Tạo giáo án vào khung nhập
-                setTimeout(() => { sendPromptButton.click(); }, 300); // Tự động click Gửi
+                setTemplate('tutor'); 
+                setTimeout(() => { sendPromptButton.click(); }, 300); 
             });
         };
 
@@ -1162,7 +1159,6 @@
             document.getElementById('tutorChatInput').value = '';
         }
 
-        // Firing autoSaveRepo() silently when navigating steps to persist progress
         document.getElementById('btnTutorPrev').addEventListener('click', () => { 
             if (currentTutorStepIndex > 0) { currentTutorStepIndex--; renderTutorStep(); autoSaveRepo(); } 
         });
@@ -1203,7 +1199,7 @@
             }
         });
 
-        // --- GEMINI API CALL ---
+        // --- GEMINI API CALL (ĐÃ CẬP NHẬT CHỐNG ẢO GIÁC BẰNG FILE TREE) ---
         const systemPrompt = `You are an AI Technical Tutor. Turn any GitHub repository into a beginner-friendly tutorial. Assume user is a beginner. Never skip steps. Explain before showing code.`;
         let model;
         try {
@@ -1214,10 +1210,7 @@
 
         const templates = {
             explain: "Hãy đóng vai một chuyên gia lập trình. Đọc repository dưới đây và tạo ra một bản tóm tắt kiến trúc dự án, luồng hoạt động chính và các file quan trọng. Giải thích cho tôi hiểu như một người mới bắt đầu.\n\n[DÁN LINK GITHUB HOẶC MÃ NGUỒN VÀO ĐÂY]",
-            
-            // Cập nhật Template Tutor để bắt AI phải liệt kê Kiến thức chuẩn bị
             tutor: "Hãy tạo một lộ trình giáo án thực hành dự án này. Chia thành các bước nhỏ (tối đa 10 bước). \n\nYÊU CẦU 1: Bắt buộc liệt kê các kiến thức, ngôn ngữ, phần mềm hoặc công cụ cần cài đặt trước khi học dự án này. Bọc trong khối PREREQ_START và PREREQ_END như mẫu dưới đây.\n\nYÊU CẦU 2: Trả về kết quả CHÍNH XÁC theo định dạng mẫu dưới đây để hệ thống tôi phân tách:\n\n===PREREQ_START===\n[Liệt kê chi tiết các công cụ, ngôn ngữ, IDE cần thiết để chạy dự án]\n===PREREQ_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 1]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 1]\n===STEP_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 2]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 2]\n===STEP_END===\n\n(Tiếp tục cho đến hết. Lưu ý: CHỈ trả về các khối PREREQ và STEP, không cần phần chào hỏi).",
-            
             debug: "Tôi nhận được thông báo lỗi này trong quá trình làm. Hãy giải thích bằng ngôn ngữ đơn giản tại sao lại bị lỗi và cách khắc phục.\n[DÁN LOG LỖI VÀO ĐÂY]",
             customize: "Tôi muốn tùy chỉnh dự án này cho mục đích cá nhân của mình:\n[ĐIỀN MỤC TIÊU CỦA BẠN VÀO ĐÂY]\n\nHãy giải thích những gì tôi cần thay đổi trong mã nguồn.",
             deploy: "Hãy hướng dẫn tôi cách triển khai (deploy) dự án này lên mạng.\nCứ giả định rằng tôi chưa từng deploy bất cứ thứ gì trước đây.\nHãy giải thích cặn kẽ từng bước."
@@ -1233,13 +1226,71 @@
             const promptText = promptInput.value.trim();
             if (!promptText) return updateStatus('text-red-600', "Vui lòng nhập lời nhắc!");
 
-            updateStatus('text-blue-600', "Đang gửi yêu cầu...");
+            updateStatus('text-blue-600', "Đang phân tích yêu cầu...");
             quickActions.classList.add('hidden'); emptyStateContainer.classList.add('hidden'); loadingIndicator.classList.remove('hidden');
             buttonText.textContent = 'Đang xử lý...'; buttonSpinner.classList.remove('hidden'); sendPromptButton.disabled = true;
 
             if(window.innerWidth <= 768 && sidebar.classList.contains('open')) toggleSidebar();
 
             let finalPrompt = promptText;
+            
+            // =========================================================
+            // GIẢI PHÁP CHỐNG ẢO GIÁC (HALLUCINATION) KHI NHẬP LINK GITHUB
+            // Tự động kéo file README.md VÀ Cấu trúc thư mục gốc từ Github
+            // =========================================================
+            const extractedPath = extractRepoFromPrompt(promptText);
+            if (extractedPath && activeTemplateType === 'explain') {
+                try {
+                    updateStatus('text-blue-600', "Đang tải cấu trúc & dữ liệu thực từ GitHub...");
+                    
+                    let repoStructure = "";
+                    let readmeContent = "";
+
+                    // 1. Fetch Root Directory Structure
+                    try {
+                        const contentsRes = await fetch(`https://api.github.com/repos/${extractedPath}/contents/`);
+                        if (contentsRes.ok) {
+                            const data = await contentsRes.json();
+                            // Phân loại thư mục và file để nhìn giống cấu trúc thật
+                            const dirs = data.filter(item => item.type === 'dir').map(item => '📁 ' + item.name + '/');
+                            const files = data.filter(item => item.type === 'file').map(item => '📄 ' + item.name);
+                            repoStructure = [...dirs, ...files].join('\n');
+                        }
+                    } catch (e) { console.warn("Lỗi lấy cấu trúc thư mục", e); }
+
+                    // 2. Fetch README.md
+                    try {
+                        const readmeRes = await fetch(`https://api.github.com/repos/${extractedPath}/readme`, {
+                            headers: { "Accept": "application/vnd.github.v3.raw" }
+                        });
+                        if (readmeRes.ok) {
+                            readmeContent = await readmeRes.text();
+                        }
+                    } catch (e) { console.warn("Lỗi lấy file README", e); }
+                    
+                    // 3. Ghép vào Prompt
+                    if (repoStructure || readmeContent) {
+                        finalPrompt += `\n\n--- THÔNG TIN QUAN TRỌNG CHỐNG ẢO GIÁC ---\n`;
+                        finalPrompt += `Dưới đây là cấu trúc thư mục gốc và nội dung file README.md thực tế của dự án. Hãy phân tích dựa CHÍNH XÁC vào dữ liệu này, tuyệt đối không được tự bịa ra công nghệ hay cấu trúc:\n\n`;
+                        
+                        if (repoStructure) {
+                            finalPrompt += `[CẤU TRÚC THƯ MỤC GỐC CỦA DỰ ÁN]:\n${repoStructure}\n\n`;
+                        }
+                        if (readmeContent) {
+                            finalPrompt += `[NỘI DUNG README.md]:\n${readmeContent.substring(0, 30000)}`;
+                        }
+                        
+                        // Cập nhật RepoPath để lát hiện nút File Explorer
+                        currentGithubRepoPath = extractedPath;
+                    } else {
+                        console.warn("Repo không có dữ liệu để chống ảo giác hoặc là Repo Private.");
+                    }
+                } catch (e) {
+                    console.error("Lỗi khi fetch Github Data:", e);
+                }
+            }
+            // =========================================================
+
             if (currentRepoIndex !== "" && activeTemplateType !== 'explain') {
                 finalPrompt = `[NGỮ CẢNH DỰ ÁN TỪ PAGE INDEX ĐÃ LƯU]:\n${currentRepoIndex}\n\n`;
                 if (sessionHistory.length > 0) finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${sessionHistory[sessionHistory.length - 1].response}\n\n`;
@@ -1247,11 +1298,11 @@
             }
 
             try {
+                updateStatus('text-blue-600', "Đang chờ AI phản hồi...");
                 const result = await model.generateContent(finalPrompt);
                 const text = result.response.text();
 
                 if (activeTemplateType === 'tutor') {
-                    // Trích xuất "Kiến thức cần chuẩn bị"
                     const prereqMatch = text.match(/===PREREQ_START===([\s\S]*?)===PREREQ_END===/);
                     if (prereqMatch) {
                         tutorPrerequisites = prereqMatch[1].trim();
@@ -1259,13 +1310,11 @@
                         tutorPrerequisites = "Không có yêu cầu đặc biệt nào được AI gợi ý.";
                     }
 
-                    // Trích xuất các bước
                     const parsedSteps = parseTutorSteps(text);
                     if (parsedSteps.length > 0) {
                         tutorSteps = parsedSteps; currentTutorStepIndex = 0;
                         sessionHistory.push({ prompt: "Yêu cầu AI lập giáo án hướng dẫn từng bước...", response: `✅ **Đã tạo thành công lộ trình gồm ${tutorSteps.length} bước.**\n\nHệ thống đã mở cửa sổ Gia sư chuyên dụng để hướng dẫn bạn thực hành.` });
                         
-                        // Mở cửa sổ Gia sư kèm cờ "isFirstTime" = true để kích hoạt bảng Kiến thức cần có
                         openTutorModal(true);
                         
                         btnResumeTutor.classList.remove('hidden');
@@ -1282,9 +1331,7 @@
                     currentRepoIndex = text;
                     document.getElementById('repoContextBadge').classList.remove('hidden');
                     
-                    const extractedPath = extractRepoFromPrompt(promptText);
-                    if (extractedPath) {
-                        currentGithubRepoPath = extractedPath;
+                    if (currentGithubRepoPath) { 
                         btnOpenExplorer.classList.remove('hidden');
                         btnOpenExplorer.classList.add('flex');
                         document.getElementById('repoContextSubtext').innerText = currentGithubRepoPath;
