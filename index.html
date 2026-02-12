@@ -83,9 +83,16 @@
             #sidebar { position: fixed; transform: translateX(-100%); z-index: 50; }
             #sidebar.open { transform: translateX(0); }
         }
+
+        /* Nút Cuộn Lên Đầu Trang */
+        .show-scroll-btn {
+            opacity: 1 !important;
+            transform: translateY(0) !important;
+            pointer-events: auto !important;
+        }
     </style>
 </head>
-<body class="bg-background-light text-gray-800 font-sans h-screen flex overflow-hidden selection:bg-primary selection:text-white">
+<body class="bg-background-light text-gray-800 font-sans h-screen flex overflow-hidden selection:bg-primary selection:text-white relative">
 
     <!-- Sidebar Overlay (Mobile) -->
     <div id="sidebarOverlay" class="fixed inset-0 bg-gray-900/50 z-40 hidden opacity-0 transition-opacity"></div>
@@ -261,6 +268,11 @@
                 </div>
             </div>
         </div>
+
+        <!-- Nút Cuộn lên đầu trang (Nằm trong thẻ Main để fixed theo viewport) -->
+        <button id="scrollToTopBtn" class="fixed bottom-6 right-6 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center z-50 hover:bg-primary-hover hover:-translate-y-1 transition-all opacity-0 translate-y-4 pointer-events-none" title="Cuộn lên đầu trang">
+            <span class="material-symbols-rounded">arrow_upward</span>
+        </button>
     </main>
 
     <!-- MODALS -->
@@ -371,6 +383,22 @@
         const historyList = document.getElementById('historyList');
         const quickActions = document.getElementById('quickActions');
         const loadingIndicator = document.getElementById('loadingIndicator');
+
+        // --- SCROLL TO TOP LOGIC ---
+        const mainContentElement = document.getElementById('main-content');
+        const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+
+        mainContentElement.addEventListener('scroll', () => {
+            if (mainContentElement.scrollTop > 300) {
+                scrollToTopBtn.classList.add('show-scroll-btn');
+            } else {
+                scrollToTopBtn.classList.remove('show-scroll-btn');
+            }
+        });
+
+        scrollToTopBtn.addEventListener('click', () => {
+            mainContentElement.scrollTo({ top: 0, behavior: 'smooth' });
+        });
 
         window.clearRepoIndex = function() {
             currentRepoId = null;
@@ -577,13 +605,14 @@
             }
         }
 
-        // --- RENDER GIAO DIỆN CHAT ---
-        function renderChatHistory() {
+        // --- RENDER GIAO DIỆN CHAT VÀ AUTO SCROLL ---
+        function renderChatHistory(isNewMessage = false) {
             emptyStateContainer.classList.add('hidden'); // Ẩn màn hình chào
             chatHistoryContainer.innerHTML = "";
+            
             sessionHistory.forEach(item => {
                 const block = document.createElement('div');
-                block.className = 'mb-8 pb-6 border-b border-gray-100 last:border-0';
+                block.className = 'mb-8 pb-6 border-b border-gray-100 last:border-0 chat-block';
                 block.innerHTML = `
                     <div class="bg-blue-50/50 p-4 rounded-2xl rounded-tr-sm border border-blue-100/50 text-gray-800 font-medium mb-5 text-[15px] whitespace-pre-wrap flex gap-3 shadow-sm">
                         <span class="material-symbols-rounded text-primary flex-shrink-0 mt-0.5">person</span>
@@ -595,8 +624,20 @@
                 `;
                 chatHistoryContainer.appendChild(block);
             });
-            // Cuộn xuống
-            document.getElementById('main-content').scrollTop = document.getElementById('main-content').scrollHeight;
+
+            // Logic tự động cuộn
+            if (isNewMessage) {
+                // Cuộn chính xác lên mép đầu của câu trả lời vừa xuất hiện
+                const lastBlock = chatHistoryContainer.lastElementChild;
+                if (lastBlock) {
+                    setTimeout(() => {
+                        lastBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 50); // Chờ DOM render xong
+                }
+            } else {
+                // Khi load bài cũ từ sidebar thì cuộn thẳng xuống đáy màn hình
+                mainContentElement.scrollTop = mainContentElement.scrollHeight;
+            }
         }
 
         // --- QUICK ACTIONS ---
@@ -809,7 +850,10 @@ Rules:
                 promptInput.value = "";
 
                 loadingIndicator.classList.add('hidden');
-                renderChatHistory();
+                
+                // Gọi render với cờ true để hệ thống tự động scroll đến đầu tin nhắn mới nhất
+                renderChatHistory(true);
+                
                 autoSaveRepo();
                 
                 updateStatus('text-green-600', activeTemplateType === 'explain' ? "📌 Đã tự động lưu dự án!" : "Đã lưu tiến trình.");
