@@ -35,7 +35,8 @@
 
     <!-- Thư viện Markdown -->
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <!-- ĐỔI THEME DARK SANG THEME LIGHT DỊU MẮT HƠN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/github-markdown-css/5.5.0/github-markdown-light.min.css">
 
@@ -804,6 +805,43 @@
             }
         }
 
+        // HÀM MỚI: Rút gọn code khi hiển thị câu hỏi của người dùng
+        function formatUserMessage(text) {
+            // Nhận diện prompt chứa code từ File Explorer
+            if (text.includes('[MÃ NGUỒN FILE]:')) {
+                const parts = text.split('[MÃ NGUỒN FILE]:');
+                const instruction = parts[0].trim();
+                let codePart = parts[1].trim();
+                
+                // Cắt bỏ dấu markdown ``` nếu có để lấy code thuần
+                if(codePart.startsWith('```')) {
+                    const firstNewline = codePart.indexOf('\n');
+                    const lastBackticks = codePart.lastIndexOf('```');
+                    if(firstNewline !== -1 && lastBackticks !== -1) {
+                        codePart = codePart.substring(firstNewline + 1, lastBackticks).trim();
+                    }
+                }
+                
+                // Trích xuất ~30 ký tự đầu tiên
+                const preview = codePart.substring(0, 30).replace(/</g, '&lt;').replace(/>/g, '&gt;') + '...';
+                
+                return `${instruction}<br><br>
+                <div class="bg-white border border-blue-200 rounded-xl overflow-hidden mt-2 shadow-sm">
+                    <div class="bg-blue-50 px-3 py-2 flex items-center justify-between cursor-pointer hover:bg-blue-100 transition-colors" onclick="this.nextElementSibling.classList.toggle('hidden')">
+                        <div class="flex items-center gap-2 text-blue-700 text-[13px] font-semibold">
+                            <span class="material-symbols-rounded text-[18px]">data_object</span>
+                            <span>Mã nguồn: ${preview}</span>
+                        </div>
+                        <span class="text-[10px] bg-white border border-blue-200 px-2 py-0.5 rounded-full text-blue-600 shadow-sm whitespace-nowrap">Nhấn xem chi tiết</span>
+                    </div>
+                    <div class="hidden p-3 bg-gray-50 text-[12px] font-mono text-gray-600 max-h-[300px] overflow-y-auto whitespace-pre-wrap border-t border-blue-100">
+                        ${codePart.replace(/</g, '&lt;').replace(/>/g, '&gt;')}
+                    </div>
+                </div>`;
+            }
+            return text;
+        }
+
         // --- RENDER GIAO DIỆN CHAT ---
         function renderChatHistory(isNewMessage = false) {
             emptyStateContainer.classList.add('hidden'); 
@@ -815,7 +853,7 @@
                 block.innerHTML = `
                     <div class="bg-blue-50/50 p-4 rounded-2xl rounded-tr-sm border border-blue-100/50 text-gray-800 font-medium mb-5 text-[15px] whitespace-pre-wrap flex gap-3 shadow-sm">
                         <span class="material-symbols-rounded text-primary flex-shrink-0 mt-0.5">person</span>
-                        <div class="leading-relaxed">${item.prompt}</div>
+                        <div class="leading-relaxed w-full">${formatUserMessage(item.prompt)}</div>
                     </div>
                     <div class="markdown-body !text-[15px] leading-relaxed text-gray-800">
                         ${marked.parse(item.response)}
@@ -897,16 +935,25 @@
             const validLang = (lang && hljs.getLanguage(lang)) ? lang : 'plaintext';
             const highlighted = validLang === 'plaintext' ? hljs.highlightAuto(code).value : hljs.highlight(code, { language: validLang }).value;
             const encodedCode = encodeURIComponent(code); 
+            
+            // Xử lý đếm dòng, nếu code dài thì cho thanh cuộn thay vì kéo dài lê thê
+            const lineCount = code.split('\n').length;
+            const isLongCode = lineCount > 15;
+            const codeId = 'code-' + Math.random().toString(36).substr(2, 9);
+            
             return `
-            <div class="code-block-wrapper rounded-xl overflow-hidden bg-[#0d1117] border border-gray-700 my-5 shadow-md text-left">
-                <div class="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-gray-700">
-                    <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">${validLang}</span>
-                    <button class="copy-btn flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-white transition-colors focus:outline-none" data-code="${encodedCode}">
-                        <span class="material-symbols-rounded text-[16px]">content_copy</span> <span class="copy-text">Sao chép</span>
-                    </button>
+            <div class="code-block-wrapper rounded-xl overflow-hidden bg-white border border-gray-200 my-5 shadow-[0_2px_8px_rgba(0,0,0,0.04)] text-left">
+                <div class="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
+                    <span class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1.5"><span class="material-symbols-rounded text-[14px]">code</span>${validLang}</span>
+                    <div class="flex items-center gap-2">
+                        ${isLongCode ? `<button onclick="document.getElementById('${codeId}').classList.toggle('max-h-[300px]'); this.innerText = this.innerText === 'Mở rộng toàn bộ' ? 'Thu gọn' : 'Mở rộng toàn bộ';" class="text-[11px] font-medium text-primary hover:bg-blue-50 border border-transparent hover:border-blue-100 px-2 py-1.5 rounded transition-all">Mở rộng toàn bộ</button>` : ''}
+                        <button class="copy-btn flex items-center gap-1.5 text-[11px] font-medium text-gray-600 bg-white border border-gray-200 hover:bg-gray-100 px-2.5 py-1.5 rounded-lg shadow-sm transition-all focus:outline-none" data-code="${encodedCode}">
+                            <span class="material-symbols-rounded text-[14px]">content_copy</span> <span class="copy-text">Sao chép</span>
+                        </button>
+                    </div>
                 </div>
-                <div class="p-4 overflow-x-auto text-[14px]">
-                    <pre class="!m-0 !bg-transparent !p-0"><code class="hljs language-${validLang} !text-[#e6edf3] !bg-transparent">${highlighted}</code></pre>
+                <div id="${codeId}" class="p-4 overflow-x-auto text-[14px] bg-[#f8f9fa] ${isLongCode ? 'max-h-[300px] overflow-y-auto' : ''}">
+                    <pre class="!m-0 !bg-transparent !p-0"><code class="hljs language-${validLang} !text-gray-800 !bg-transparent">${highlighted}</code></pre>
                 </div>
             </div>`;
         };
