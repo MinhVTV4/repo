@@ -90,6 +90,9 @@
             transform: translateY(0) !important;
             pointer-events: auto !important;
         }
+
+        /* Transition cho Modal Cửa sổ Gia sư */
+        #tutorModal { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
     </style>
 </head>
 <body class="bg-background-light text-gray-800 font-sans h-screen flex overflow-hidden selection:bg-primary selection:text-white relative">
@@ -121,9 +124,10 @@
                         <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">menu_book</span>
                         <span class="text-sm font-medium text-gray-700">1. Giải thích Repo (Nhập môn)</span>
                     </button>
-                    <button onclick="setTemplate('tutor')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
-                        <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">steps</span>
-                        <span class="text-sm font-medium text-gray-700">2. Dạy từng bước (Thực hành)</span>
+                    <button onclick="setTemplate('tutor')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md relative overflow-hidden">
+                        <div class="absolute right-0 top-0 h-full w-1 bg-primary"></div>
+                        <span class="material-symbols-rounded text-primary group-hover:text-primary-hover">model_training</span>
+                        <span class="text-sm font-medium text-primary group-hover:text-primary-hover">2. Dạy từng bước (Cửa sổ riêng)</span>
                     </button>
                     <button onclick="setTemplate('debug')" class="w-full text-left group flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-white hover:bg-blue-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md">
                         <span class="material-symbols-rounded text-gray-500 group-hover:text-primary">bug_report</span>
@@ -198,7 +202,7 @@
                 <button id="menuToggle" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-full transition-colors">
                     <span class="material-symbols-rounded">menu</span>
                 </button>
-                <span class="text-sm font-medium text-gray-600">Phiên làm việc</span>
+                <span class="text-sm font-medium text-gray-600">Phiên làm việc chính</span>
             </div>
             
             <!-- Vùng hiển thị Auth -->
@@ -238,10 +242,10 @@
                         </div>
                         <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all text-left">
                             <div class="flex items-center gap-3 mb-2">
-                                <span class="material-symbols-rounded text-purple-500 bg-purple-100 p-1.5 rounded-lg">bug_report</span>
-                                <h3 class="font-medium text-gray-700">Gỡ lỗi thông minh</h3>
+                                <span class="material-symbols-rounded text-purple-500 bg-purple-100 p-1.5 rounded-lg">model_training</span>
+                                <h3 class="font-medium text-gray-700">Dạy thực hành từng bước</h3>
                             </div>
-                            <p class="text-sm text-gray-500">Tìm và sửa lỗi nhanh chóng với giải thích chi tiết.</p>
+                            <p class="text-sm text-gray-500">Mở một cửa sổ gia sư riêng biệt để hướng dẫn bạn code từng bước một.</p>
                         </div>
                     </div>
                 </div>
@@ -257,12 +261,9 @@
 
                 <!-- Thao tác nhanh -->
                 <div id="quickActions" class="hidden mt-6 pt-6 border-t border-gray-100 flex flex-wrap gap-3 pb-8">
-                    <button id="btnNextStep" class="flex items-center gap-2 px-5 py-2.5 bg-blue-50 text-primary hover:bg-blue-100 hover:text-blue-700 rounded-full font-medium text-sm transition-all border border-blue-100">
-                        <span>Tiếp tục bước tiếp theo</span>
-                        <span class="material-symbols-rounded text-lg">arrow_forward</span>
-                    </button>
+                    <!-- Nút tiếp tục đã được di chuyển vào Modal Gia Sư chuyên dụng, ở đây chỉ để lại gỡ lỗi -->
                     <button id="btnGotBug" class="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 rounded-full font-medium text-sm transition-all shadow-sm">
-                        <span>Tôi gặp lỗi ở bước này</span>
+                        <span>Hỏi thêm / Gỡ lỗi</span>
                         <span class="material-symbols-rounded text-lg text-orange-500">bug_report</span>
                     </button>
                 </div>
@@ -275,21 +276,94 @@
         </button>
     </main>
 
-    <!-- MODALS -->
-    <!-- Modal Xác nhận (Confirm) -->
-    <div id="confirmModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[999] flex items-center justify-center backdrop-blur-sm">
+    <!-- ============================================== -->
+    <!-- CỬA SỔ GIA SƯ TỪNG BƯỚC (NEW FEATURE)          -->
+    <!-- ============================================== -->
+    <div id="tutorModal" class="fixed inset-0 z-[2000] bg-white hidden flex-col transition-all duration-300 transform translate-y-full">
+        <!-- Header -->
+        <div class="h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-surface-light flex-shrink-0 shadow-sm z-10">
+            <div class="flex items-center gap-4">
+                <div class="bg-primary/10 text-primary p-2 rounded-xl">
+                    <span class="material-symbols-rounded text-2xl">model_training</span>
+                </div>
+                <div>
+                    <h2 class="font-display font-medium text-gray-800 text-lg leading-tight" id="tutorModalTitle">Đang tải giáo án...</h2>
+                    <p class="text-xs text-primary font-medium mt-0.5" id="tutorModalProgress">Bước 1 / 10</p>
+                </div>
+            </div>
+            <button onclick="closeTutorModal()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors border border-transparent hover:border-red-100">
+                <span class="hidden md:inline">Đóng cửa sổ</span>
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+
+        <!-- Body: Split Screen -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-gray-50">
+            
+            <!-- Left Panel: Nội dung Bước -->
+            <div class="w-full md:w-3/5 lg:w-2/3 h-[55%] md:h-full flex flex-col bg-white border-b md:border-b-0 md:border-r border-gray-200 relative shadow-[2px_0_10px_rgba(0,0,0,0.02)] z-10">
+                <div class="flex-1 overflow-y-auto p-6 md:p-10 markdown-body" id="tutorStepContent">
+                    <!-- Markdown content will be rendered here -->
+                </div>
+                
+                <!-- Controls: Chuyển bước -->
+                <div class="p-4 border-t border-gray-100 bg-white flex items-center justify-between flex-shrink-0">
+                    <button id="btnTutorPrev" class="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span class="material-symbols-rounded text-[18px]">arrow_back</span> <span class="hidden sm:inline">Trở lại</span>
+                    </button>
+                    <div class="flex gap-2">
+                        <button id="btnTutorBug" class="px-4 py-2.5 text-sm font-medium text-orange-600 bg-white hover:bg-orange-50 border border-orange-200 rounded-xl transition-colors flex items-center gap-1.5 shadow-sm hover:shadow">
+                            <span class="material-symbols-rounded text-[18px]">bug_report</span> <span class="hidden sm:inline">Gỡ lỗi bước này</span>
+                        </button>
+                        <button id="btnTutorNext" class="px-6 py-2.5 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg">
+                            <span>Tiếp theo</span> <span class="material-symbols-rounded text-[18px]">arrow_forward</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Box Chat riêng cho bước hiện tại -->
+            <div class="w-full md:w-2/5 lg:w-1/3 h-[45%] md:h-full flex flex-col bg-[#f8fafc]">
+                <div class="p-3.5 border-b border-gray-200 bg-white flex items-center gap-2 flex-shrink-0 shadow-sm z-10">
+                    <span class="material-symbols-rounded text-purple-500 text-lg">forum</span>
+                    <h3 class="text-sm font-medium text-gray-700">Thảo luận & Hỏi đáp về Bước này</h3>
+                </div>
+                
+                <!-- Chat History of current step -->
+                <div id="tutorChatHistory" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+                    <div class="text-center text-xs text-gray-400 my-auto bg-white p-4 rounded-2xl border border-dashed border-gray-200 mx-4">
+                        <span class="material-symbols-rounded text-gray-300 text-3xl mb-2 block">live_help</span>
+                        Nếu không hiểu code hoặc gặp lỗi ở bước này, hãy hỏi AI tại đây!<br>Lịch sử này không làm ảnh hưởng bài học chính.
+                    </div>
+                </div>
+                
+                <!-- Chat Input -->
+                <div class="p-4 bg-white border-t border-gray-200 flex-shrink-0">
+                    <div class="relative flex items-end bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
+                        <textarea id="tutorChatInput" rows="2" class="w-full bg-transparent border-none focus:ring-0 resize-none text-sm p-3 max-h-32" placeholder="Hỏi AI hoặc dán mã lỗi vào đây..."></textarea>
+                        <button id="tutorChatSend" class="p-2.5 m-1.5 bg-primary text-white rounded-lg hover:bg-primary-hover transition-colors flex-shrink-0 flex items-center justify-center">
+                            <span class="material-symbols-rounded text-[20px]">send</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================== -->
+
+    <!-- CÁC MODALS PHỤ -->
+    <div id="confirmModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
         <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <h3 class="font-display text-lg font-medium text-gray-800 mb-2">Xác nhận</h3>
             <p id="confirmMessage" class="text-gray-600 mb-6 text-sm">Bạn có chắc chắn?</p>
             <div class="flex justify-end gap-3">
                 <button onclick="closeModal('confirmModal')" class="px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors">Hủy</button>
-                <button id="confirmYesBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm">Đồng ý xóa</button>
+                <button id="confirmYesBtn" class="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-xl transition-colors shadow-sm">Đồng ý</button>
             </div>
         </div>
     </div>
 
-    <!-- Modal Nhập liệu (Prompt) -->
-    <div id="promptModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[999] flex items-center justify-center backdrop-blur-sm">
+    <div id="promptModal" class="custom-modal-overlay fixed inset-0 bg-gray-900/40 z-[9999] flex items-center justify-center backdrop-blur-sm">
         <div class="custom-modal bg-white rounded-2xl p-6 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <h3 id="promptTitle" class="font-display text-lg font-medium text-gray-800 mb-4">Nhập thông tin</h3>
             <input type="text" id="promptInputVal" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm text-gray-800 mb-6" autocomplete="off">
@@ -300,8 +374,7 @@
         </div>
     </div>
 
-    <!-- Modal Auth (Đăng nhập) -->
-    <div id="authModal" class="custom-modal-overlay show fixed inset-0 bg-gray-900/60 z-[1000] flex items-center justify-center backdrop-blur-md">
+    <div id="authModal" class="custom-modal-overlay show fixed inset-0 bg-gray-900/60 z-[3000] flex items-center justify-center backdrop-blur-md">
         <div class="custom-modal bg-white rounded-3xl p-8 w-[90%] max-w-md shadow-2xl border border-gray-100">
             <div class="text-center mb-8">
                 <div class="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 text-primary">
@@ -331,9 +404,8 @@
         </div>
     </div>
 
-    <!-- LOGIC JS (Giữ nguyên 100% Core Logic cũ) -->
+    <!-- LOGIC JS (Giữ nguyên 100% Core Logic cũ + Bổ sung logic Window Gia Sư) -->
     <script type="module">
-        // Polyfill cho AbortSignal.any
         if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
             AbortSignal.any = function(signals) {
                 const controller = new AbortController();
@@ -378,13 +450,16 @@
         let currentRepoIndex = ""; 
         let activeTemplateType = "custom"; 
 
+        // BIẾN CHO TÍNH NĂNG GIA SƯ TỪNG BƯỚC
+        let tutorSteps = [];
+        let currentTutorStepIndex = 0;
+
         const emptyStateContainer = document.getElementById('emptyStateContainer');
         const chatHistoryContainer = document.getElementById('chatHistoryContainer');
         const historyList = document.getElementById('historyList');
         const quickActions = document.getElementById('quickActions');
         const loadingIndicator = document.getElementById('loadingIndicator');
 
-        // --- SCROLL TO TOP LOGIC ---
         const mainContentElement = document.getElementById('main-content');
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
 
@@ -407,7 +482,7 @@
             document.getElementById('repoContextBadge').classList.add('hidden');
             quickActions.classList.add('hidden');
             chatHistoryContainer.innerHTML = '';
-            emptyStateContainer.classList.remove('hidden'); // Hiện lại màn hình chào
+            emptyStateContainer.classList.remove('hidden'); 
             updateStatus('text-blue-600', "Đã tạo phiên học mới.");
         };
 
@@ -581,25 +656,18 @@
             });
         };
 
-        // Hàm trích xuất tên thông minh từ câu lệnh người dùng
         function extractDefaultTitle(promptText) {
-            // 1. Ưu tiên tìm link GitHub (vd: github.com/user/repo)
             const githubRegex = /github\.com\/([^/\s]+\/[^/\s]+)/i;
             const match = promptText.match(githubRegex);
             if (match && match[1]) {
                 let repoName = match[1].replace('.git', '');
                 return "Repo: " + repoName;
             }
-            
-            // 2. Nếu không có link, lấy dòng mã nguồn/thông tin cuối cùng người dùng dán vào
             const lines = promptText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const lastLine = lines[lines.length - 1];
-            
-            // Bỏ qua các câu lệnh của Template để lấy nội dung thực tế
             if (lastLine && !lastLine.includes("DÁN LINK") && !lastLine.includes("Hãy đóng vai")) {
                 return "Dự án: " + (lastLine.length > 25 ? lastLine.substring(0, 25) + "..." : lastLine);
             }
-            
             return "Dự án Lập trình mới";
         }
 
@@ -608,9 +676,7 @@
             const reposRef = collection(db, `users/${auth.currentUser.uid}/repos`);
 
             if (currentRepoId === null) {
-                // Sử dụng hàm trích xuất thông minh thay vì cắt chuỗi bừa bãi
                 let defaultTitle = extractDefaultTitle(sessionHistory[0].prompt);
-                
                 showCustomPrompt("Đặt tên dự án để lưu lên đám mây:", defaultTitle, async (title) => {
                     if (title.trim() === "") title = defaultTitle;
                     const newRepoRef = doc(reposRef);
@@ -629,9 +695,9 @@
             }
         }
 
-        // --- RENDER GIAO DIỆN CHAT VÀ AUTO SCROLL ---
+        // --- RENDER GIAO DIỆN CHAT ---
         function renderChatHistory(isNewMessage = false) {
-            emptyStateContainer.classList.add('hidden'); // Ẩn màn hình chào
+            emptyStateContainer.classList.add('hidden'); 
             chatHistoryContainer.innerHTML = "";
             
             sessionHistory.forEach(item => {
@@ -649,27 +715,19 @@
                 chatHistoryContainer.appendChild(block);
             });
 
-            // Logic tự động cuộn
             if (isNewMessage) {
-                // Cuộn chính xác lên mép đầu của câu trả lời vừa xuất hiện
                 const lastBlock = chatHistoryContainer.lastElementChild;
                 if (lastBlock) {
                     setTimeout(() => {
                         lastBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 50); // Chờ DOM render xong
+                    }, 50); 
                 }
             } else {
-                // Khi load bài cũ từ sidebar thì cuộn thẳng xuống đáy màn hình
                 mainContentElement.scrollTop = mainContentElement.scrollHeight;
             }
         }
 
-        // --- QUICK ACTIONS ---
-        document.getElementById('btnNextStep').addEventListener('click', () => {
-            promptInput.value = "Tôi đã hoàn thành bước vừa rồi. Hãy tiếp tục hướng dẫn tôi bước tiếp theo.";
-            sendPromptButton.click();
-        });
-
+        // --- QUICK ACTIONS CHÍNH ---
         document.getElementById('btnGotBug').addEventListener('click', () => {
             promptInput.value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n[DÁN MÃ LỖI VÀO ĐÂY]";
             promptInput.focus();
@@ -679,17 +737,13 @@
         });
 
         // --- CHỨC NĂNG COPY CODE ---
-        // Lắng nghe sự kiện click trên toàn document để bắt nút "Sao chép"
         document.addEventListener('click', function(e) {
             const copyBtn = e.target.closest('.copy-btn');
             if (!copyBtn) return;
 
             const codeToCopy = decodeURIComponent(copyBtn.getAttribute('data-code'));
-            
-            // Xử lý logic copy bằng textarea (tương thích cả iFrame)
             const textArea = document.createElement("textarea");
             textArea.value = codeToCopy;
-            // Tránh scroll màn hình khi chèn textarea
             textArea.style.top = "0";
             textArea.style.left = "0";
             textArea.style.position = "fixed";
@@ -702,17 +756,14 @@
                 if (successful) {
                     const icon = copyBtn.querySelector('.material-symbols-rounded');
                     const text = copyBtn.querySelector('.copy-text');
-                    
                     const originalIcon = icon.innerText;
                     const originalText = text.innerText;
                     
-                    // Hiển thị trạng thái thành công
                     icon.innerText = 'check';
                     icon.classList.add('text-green-500');
                     text.innerText = 'Đã chép!';
                     text.classList.add('text-green-500');
                     
-                    // Reset lại sau 2 giây
                     setTimeout(() => {
                         icon.innerText = originalIcon;
                         icon.classList.remove('text-green-500');
@@ -726,7 +777,6 @@
             document.body.removeChild(textArea);
         });
 
-        // --- SIDEBAR MOBILE ---
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
@@ -744,7 +794,6 @@
         menuToggle.addEventListener('click', toggleSidebar);
         overlay.addEventListener('click', toggleSidebar);
 
-        // --- HELPERS & AI ---
         function updateStatus(colorClass, message) {
             statusMessage.className = `text-xs text-center font-medium mt-1 px-2 transition-colors ${colorClass}`;
             statusMessage.innerHTML = message; 
@@ -752,21 +801,17 @@
 
         updateStatus('text-blue-600', "Firebase App khởi tạo.<br>Đang chờ mô hình AI...");
 
-        // Ghi đè bộ cấu hình Render của Marked.js để tạo ra Giao diện Code Block mới cực đẹp
         const renderer = new marked.Renderer();
         renderer.code = function(codeOrToken, language) {
             let code = codeOrToken;
             let lang = language;
-            
-            // Xử lý tương thích cho các phiên bản Marked.js khác nhau
             if (typeof codeOrToken === 'object') {
                 code = codeOrToken.text;
                 lang = codeOrToken.lang;
             }
-            
             const validLang = (lang && hljs.getLanguage(lang)) ? lang : 'plaintext';
             const highlighted = validLang === 'plaintext' ? hljs.highlightAuto(code).value : hljs.highlight(code, { language: validLang }).value;
-            const encodedCode = encodeURIComponent(code); // Mã hóa code an toàn để gán vào nút
+            const encodedCode = encodeURIComponent(code); 
 
             return `
             <div class="code-block-wrapper rounded-xl overflow-hidden bg-[#0d1117] border border-gray-700 my-5 shadow-md">
@@ -782,8 +827,6 @@
                 </div>
             </div>`;
         };
-
-        // Kích hoạt custom renderer
         marked.use({ renderer });
 
         const systemPrompt = `You are an AI Technical Tutor.
@@ -820,9 +863,131 @@ Rules:
             updateStatus('text-red-600', `Lỗi AI: ${e.message}`);
         }
 
+        // --- CÁC HÀM XỬ LÝ GIA SƯ TỪNG BƯỚC (NEW) ---
+        function parseTutorSteps(text) {
+            const steps = [];
+            const blocks = text.split('===STEP_START===');
+            for (let i = 1; i < blocks.length; i++) {
+                const block = blocks[i];
+                const endIdx = block.indexOf('===STEP_END===');
+                let contentStr = endIdx !== -1 ? block.substring(0, endIdx).trim() : block.trim();
+                
+                let title = `Bước ${i}`;
+                const titleMatch = contentStr.match(/TIÊU ĐỀ:\s*(.*)/);
+                if (titleMatch) {
+                    title = titleMatch[1].trim();
+                    contentStr = contentStr.replace(titleMatch[0], '').trim();
+                }
+                
+                const contentMatch = contentStr.match(/NỘI DUNG:\s*([\s\S]*)/);
+                if (contentMatch) {
+                    contentStr = contentMatch[1].trim();
+                }
+                steps.push({ title, content: contentStr });
+            }
+            return steps;
+        }
+
+        window.closeTutorModal = function() {
+            const modal = document.getElementById('tutorModal');
+            modal.classList.add('translate-y-full');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        }
+
+        function openTutorModal() {
+            const modal = document.getElementById('tutorModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
+            renderTutorStep();
+        }
+
+        function renderTutorStep() {
+            const step = tutorSteps[currentTutorStepIndex];
+            document.getElementById('tutorModalTitle').innerText = step.title;
+            document.getElementById('tutorModalProgress').innerText = `Bước ${currentTutorStepIndex + 1} / ${tutorSteps.length}`;
+            document.getElementById('tutorStepContent').innerHTML = marked.parse(step.content);
+            document.getElementById('tutorStepContent').scrollTop = 0;
+            
+            document.getElementById('btnTutorPrev').disabled = (currentTutorStepIndex === 0);
+            
+            const nextBtn = document.getElementById('btnTutorNext');
+            if (currentTutorStepIndex === tutorSteps.length - 1) {
+                nextBtn.innerHTML = 'Hoàn thành <span class="material-symbols-rounded text-[18px]">done_all</span>';
+            } else {
+                nextBtn.innerHTML = 'Tiếp theo <span class="material-symbols-rounded text-[18px]">arrow_forward</span>';
+            }
+            
+            // Xóa lịch sử box chat nhỏ để trò chuyện nội bộ cho bước mới
+            document.getElementById('tutorChatHistory').innerHTML = `
+                <div class="text-center text-xs text-gray-400 my-auto bg-white p-4 rounded-2xl border border-dashed border-gray-200 mx-4">
+                    <span class="material-symbols-rounded text-gray-300 text-3xl mb-2 block">live_help</span>
+                    Nếu không hiểu code hoặc gặp lỗi ở bước này, hãy hỏi AI tại đây!<br>Lịch sử này không làm ảnh hưởng bài học chính.
+                </div>
+            `;
+            document.getElementById('tutorChatInput').value = '';
+        }
+
+        document.getElementById('btnTutorPrev').addEventListener('click', () => {
+            if (currentTutorStepIndex > 0) { currentTutorStepIndex--; renderTutorStep(); }
+        });
+
+        document.getElementById('btnTutorNext').addEventListener('click', () => {
+            if (currentTutorStepIndex < tutorSteps.length - 1) { 
+                currentTutorStepIndex++; 
+                renderTutorStep(); 
+            } else {
+                closeTutorModal();
+                updateStatus('text-green-600', 'Chúc mừng bạn đã hoàn thành giáo án!');
+            }
+        });
+
+        document.getElementById('btnTutorBug').addEventListener('click', () => {
+            const input = document.getElementById('tutorChatInput');
+            input.value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n";
+            input.focus();
+        });
+
+        document.getElementById('tutorChatSend').addEventListener('click', async () => {
+            const input = document.getElementById('tutorChatInput');
+            const userText = input.value.trim();
+            if(!userText || !model) return;
+            
+            const historyDiv = document.getElementById('tutorChatHistory');
+            // Remove placeholder if it exists
+            if (historyDiv.innerHTML.includes('đặt câu hỏi về bước này')) historyDiv.innerHTML = '';
+            
+            // Append User Msg
+            historyDiv.innerHTML += `<div class="bg-blue-100 text-blue-900 p-3 rounded-xl rounded-br-sm text-[13px] ml-auto max-w-[90%] mb-3 shadow-sm break-words whitespace-pre-wrap font-medium border border-blue-200">${userText}</div>`;
+            input.value = '';
+            
+            // Loading Indicator
+            const loadingId = 'loading-' + Date.now();
+            historyDiv.innerHTML += `<div id="${loadingId}" class="bg-white border border-gray-200 text-gray-600 p-3 rounded-xl rounded-bl-sm text-[13px] mr-auto max-w-[85%] mb-3 flex items-center gap-2 shadow-sm"><div class="spinner !w-4 !h-4 !border-2 border-gray-300 border-l-primary"></div> Đang trả lời...</div>`;
+            historyDiv.scrollTop = historyDiv.scrollHeight;
+            
+            // System Context for specific Step Chat
+            const stepContent = tutorSteps[currentTutorStepIndex].content;
+            const promptContext = `[NGỮ CẢNH DỰ ÁN]:\n${currentRepoIndex}\n\n[BƯỚC BẠN ĐANG HƯỚNG DẪN TÔI]:\n${stepContent}\n\n[CÂU HỎI CỦA TÔI]:\n${userText}\n\nLưu ý: Chỉ trả lời tập trung vào câu hỏi liên quan đến bước này, giải thích dễ hiểu cho newbie.`;
+            
+            try {
+                const result = await model.generateContent(promptContext);
+                const text = result.response.text();
+                document.getElementById(loadingId).remove();
+                historyDiv.innerHTML += `<div class="bg-white border border-gray-200 text-gray-800 p-4 rounded-xl rounded-bl-sm mr-auto w-full mb-3 shadow-sm markdown-body !text-[13.5px]">${marked.parse(text)}</div>`;
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+            } catch(e) {
+                document.getElementById(loadingId).remove();
+                historyDiv.innerHTML += `<div class="bg-red-50 text-red-600 border border-red-100 p-3 rounded-xl rounded-bl-sm text-[13px] mr-auto max-w-[85%] mb-3 shadow-sm font-medium">Lỗi kết nối: ${e.message}</div>`;
+            }
+        });
+
+        // ------------------------------------------
+
         const templates = {
             explain: "Hãy đóng vai một chuyên gia lập trình. Đọc repository dưới đây và tạo ra một bản tóm tắt kiến trúc dự án, luồng hoạt động chính và các file quan trọng. Giải thích cho tôi hiểu như một người mới bắt đầu.\n\n[DÁN LINK GITHUB HOẶC MÃ NGUỒN VÀO ĐÂY]",
-            tutor: "Bây giờ hãy dạy tôi thực hành dự án trên từng bước một.\nSau mỗi bước, hãy đợi tôi xác nhận trước khi tiếp tục.\nNếu tôi gặp lỗi, hãy giúp tôi sửa (debug).",
+            // TEMPLATE "TUTOR" MỚI ĐƯỢC CHỈ ĐỊNH RÕ FORMAT ĐỂ PHÂN TÁCH BƯỚC
+            tutor: "Hãy tạo một lộ trình giáo án thực hành dự án này. Chia thành các bước nhỏ (tối đa 10 bước). YÊU CẦU BẮT BUỘC: Trả về kết quả CHÍNH XÁC theo định dạng mẫu dưới đây để hệ thống tôi phân tách:\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 1]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 1]\n===STEP_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 2]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 2]\n===STEP_END===\n\n(Tiếp tục cho đến hết. Lưu ý: CHỈ trả về các khối STEP_START và STEP_END, không cần phần chào hỏi).",
             debug: "Tôi nhận được thông báo lỗi này trong quá trình làm. Hãy giải thích bằng ngôn ngữ đơn giản tại sao lại bị lỗi và cách khắc phục.\n[DÁN LOG LỖI VÀO ĐÂY]",
             customize: "Tôi muốn tùy chỉnh dự án này cho mục đích cá nhân của mình:\n[ĐIỀN MỤC TIÊU CỦA BẠN VÀO ĐÂY]\n\nHãy giải thích những gì tôi cần thay đổi trong mã nguồn.",
             deploy: "Hãy hướng dẫn tôi cách triển khai (deploy) dự án này lên mạng.\nCứ giả định rằng tôi chưa từng deploy bất cứ thứ gì trước đây.\nHãy giải thích cặn kẽ từng bước."
@@ -865,6 +1030,37 @@ Rules:
                 const result = await model.generateContent(finalPrompt);
                 const text = result.response.text();
 
+                // ĐÁNH CHẶN LOGIC DÀNH CHO CỬA SỔ GIA SƯ (TUTOR MODE)
+                if (activeTemplateType === 'tutor') {
+                    const parsedSteps = parseTutorSteps(text);
+                    if (parsedSteps.length > 0) {
+                        tutorSteps = parsedSteps;
+                        currentTutorStepIndex = 0;
+                        
+                        // Ghi log vào màn hình chính để theo dõi lịch sử
+                        sessionHistory.push({ 
+                            prompt: "Yêu cầu AI lập giáo án hướng dẫn từng bước...", 
+                            response: `✅ **Đã tạo thành công lộ trình gồm ${tutorSteps.length} bước.**\n\nHệ thống đã mở cửa sổ Gia sư chuyên dụng để hướng dẫn bạn thực hành.` 
+                        });
+                        
+                        openTutorModal();
+                        
+                        loadingIndicator.classList.add('hidden');
+                        renderChatHistory(true);
+                        autoSaveRepo();
+                        updateStatus('text-green-600', "Đã tạo giáo án thực hành.");
+                        activeTemplateType = "custom";
+                        quickActions.classList.remove('hidden');
+                        
+                        // Reset button state
+                        buttonText.textContent = 'Gửi tới Gemini';
+                        buttonSpinner.classList.add('hidden');
+                        sendPromptButton.disabled = false;
+                        return; // THOÁT RA KHÔNG CHẠY CODE HIỂN THỊ CHAT BÌNH THƯỜNG BÊN DƯỚI NỮA
+                    }
+                }
+
+                // FLOW BÌNH THƯỜNG CHO CÁC LỆNH KHÁC
                 if (activeTemplateType === 'explain') {
                     currentRepoIndex = text;
                     document.getElementById('repoContextBadge').classList.remove('hidden');
@@ -875,9 +1071,7 @@ Rules:
 
                 loadingIndicator.classList.add('hidden');
                 
-                // Gọi render với cờ true để hệ thống tự động scroll đến đầu tin nhắn mới nhất
                 renderChatHistory(true);
-                
                 autoSaveRepo();
                 
                 updateStatus('text-green-600', activeTemplateType === 'explain' ? "📌 Đã tự động lưu dự án!" : "Đã lưu tiến trình.");
