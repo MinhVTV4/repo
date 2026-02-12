@@ -91,8 +91,17 @@
             pointer-events: auto !important;
         }
 
-        /* Transition cho Modal Cửa sổ Gia sư */
-        #tutorModal { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        /* Transition cho Modal Cửa sổ Gia sư & Explorer */
+        .slide-up-modal { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+        /* CSS cho Tree View (GitHub Explorer) */
+        .tree-item { display: flex; items-center; padding: 6px 10px; cursor: pointer; border-radius: 6px; transition: background 0.2s; font-size: 14px; color: #374151; }
+        .tree-item:hover { background-color: #f3f4f6; }
+        .tree-item.selected { background-color: #e0e7ff; color: #1a73e8; font-weight: 500; }
+        .tree-icon { margin-right: 8px; font-size: 18px; color: #6b7280; }
+        .tree-item:hover .tree-icon { color: #1a73e8; }
+        .tree-children { padding-left: 18px; border-left: 1px dashed #e5e7eb; margin-left: 18px; display: none; }
+        .tree-children.open { display: block; }
     </style>
 </head>
 <body class="bg-background-light text-gray-800 font-sans h-screen flex overflow-hidden selection:bg-primary selection:text-white relative">
@@ -101,7 +110,7 @@
     <div id="sidebarOverlay" class="fixed inset-0 bg-gray-900/50 z-40 hidden opacity-0 transition-opacity"></div>
 
     <!-- CỘT TRÁI (SIDEBAR) -->
-    <aside id="sidebar" class="w-80 md:w-96 flex flex-col border-r border-gray-200 bg-surface-light shadow-sm h-full flex-shrink-0">
+    <aside id="sidebar" class="w-80 md:w-96 flex flex-col border-r border-gray-200 bg-surface-light shadow-sm h-full flex-shrink-0 z-50">
         <div class="p-5 pb-2 border-b border-transparent">
             <h1 class="font-display text-2xl font-medium text-primary flex items-center gap-2">
                 <span class="material-symbols-rounded text-3xl">school</span> Gia Sư Lập Trình AI
@@ -153,7 +162,7 @@
                     <span class="material-symbols-rounded text-green-600 text-lg flex-shrink-0 mt-0.5">push_pin</span>
                     <div class="flex-1">
                         <p class="text-xs text-green-800 font-medium">Đã ghi nhớ dự án.</p>
-                        <p class="text-[11px] text-green-600">Sẵn sàng dạy từng bước.</p>
+                        <p class="text-[11px] text-green-600" id="repoContextSubtext">Sẵn sàng dạy từng bước.</p>
                     </div>
                     <button onclick="clearRepoIndex()" class="text-green-500 hover:text-green-700 transition-colors" title="Xóa ghi nhớ">
                         <span class="material-symbols-rounded text-lg">close</span>
@@ -205,9 +214,15 @@
                 <span class="text-sm font-medium text-gray-600">Phiên làm việc chính</span>
             </div>
             
-            <!-- Vùng hiển thị Auth -->
-            <div class="flex items-center gap-2">
-                <div id="userInfoDisplay" class="hidden flex items-center gap-3">
+            <div class="flex items-center gap-3">
+                <!-- Nút File Explorer (Ẩn mặc định) -->
+                <button id="btnOpenExplorer" onclick="openExplorerModal()" class="hidden items-center gap-2 text-sm font-medium text-primary hover:bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full transition-colors shadow-sm bg-white">
+                    <span class="material-symbols-rounded text-[18px]">folder_open</span>
+                    <span class="hidden sm:inline">Duyệt Mã Nguồn</span>
+                </button>
+
+                <!-- Vùng hiển thị Auth -->
+                <div id="userInfoDisplay" class="hidden flex items-center gap-3 border-l border-gray-200 pl-3 ml-1">
                     <span id="userEmail" class="text-sm text-gray-600 hidden sm:block max-w-[150px] truncate"></span>
                     <button onclick="logoutUser()" class="text-xs font-medium text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-full transition-colors border border-red-100">Đăng xuất</button>
                 </div>
@@ -238,7 +253,7 @@
                                 <span class="material-symbols-rounded text-orange-500 bg-orange-100 p-1.5 rounded-lg">code</span>
                                 <h3 class="font-medium text-gray-700">Phân tích mã nguồn</h3>
                             </div>
-                            <p class="text-sm text-gray-500">Hiểu rõ cấu trúc và logic của repo GitHub.</p>
+                            <p class="text-sm text-gray-500">Hiểu rõ cấu trúc và tự động duyệt cây thư mục của repo GitHub.</p>
                         </div>
                         <div class="p-4 rounded-2xl border border-gray-100 bg-gray-50 hover:bg-white hover:shadow-md transition-all text-left">
                             <div class="flex items-center gap-3 mb-2">
@@ -270,17 +285,79 @@
             </div>
         </div>
 
-        <!-- Nút Cuộn lên đầu trang (Nằm trong thẻ Main để fixed theo viewport) -->
-        <button id="scrollToTopBtn" class="fixed bottom-6 right-6 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center z-50 hover:bg-primary-hover hover:-translate-y-1 transition-all opacity-0 translate-y-4 pointer-events-none" title="Cuộn lên đầu trang">
+        <!-- Nút Cuộn lên đầu trang -->
+        <button id="scrollToTopBtn" class="fixed bottom-6 right-6 w-12 h-12 bg-primary text-white rounded-full shadow-xl flex items-center justify-center z-30 hover:bg-primary-hover hover:-translate-y-1 transition-all opacity-0 translate-y-4 pointer-events-none" title="Cuộn lên đầu trang">
             <span class="material-symbols-rounded">arrow_upward</span>
         </button>
     </main>
 
     <!-- ============================================== -->
-    <!-- CỬA SỔ GIA SƯ TỪNG BƯỚC (NEW FEATURE)          -->
+    <!-- FILE EXPLORER MODAL (NEW FEATURE)              -->
     <!-- ============================================== -->
-    <div id="tutorModal" class="fixed inset-0 z-[2000] bg-white hidden flex-col transition-all duration-300 transform translate-y-full">
+    <div id="explorerModal" class="slide-up-modal fixed inset-0 z-[2000] bg-white hidden flex-col transform translate-y-full">
         <!-- Header -->
+        <div class="h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-[#f6f8fa] flex-shrink-0 z-10">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-100 text-blue-600 p-2 rounded-xl border border-blue-200">
+                    <span class="material-symbols-rounded text-2xl">account_tree</span>
+                </div>
+                <div>
+                    <h2 class="font-display font-medium text-gray-800 text-[15px] leading-tight flex items-center gap-2">
+                        Duyệt Mã Nguồn <span id="explorerRepoName" class="text-primary font-bold bg-blue-50 px-2 py-0.5 rounded text-[13px] border border-blue-100"></span>
+                    </h2>
+                </div>
+            </div>
+            <button onclick="closeExplorerModal()" class="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-200 rounded-xl transition-colors">
+                <span class="hidden md:inline">Đóng</span>
+                <span class="material-symbols-rounded">close</span>
+            </button>
+        </div>
+
+        <!-- Body: Split Screen -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-white">
+            
+            <!-- Left Panel: File Tree -->
+            <div class="w-full md:w-64 lg:w-80 h-[40%] md:h-full flex flex-col bg-[#f6f8fa] border-b md:border-b-0 md:border-r border-gray-200 flex-shrink-0">
+                <div class="p-3 border-b border-gray-200 flex items-center gap-2 bg-white text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    <span class="material-symbols-rounded text-[18px]">folder_copy</span> Cây thư mục
+                </div>
+                <div class="flex-1 overflow-y-auto p-2" id="fileTreeContainer">
+                    <!-- Tree items injected via JS -->
+                    <div class="flex justify-center mt-10 text-gray-400">
+                        <div class="spinner !border-gray-300 !border-l-primary"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Code Viewer -->
+            <div class="flex-1 h-[60%] md:h-full flex flex-col bg-[#0d1117] relative">
+                <!-- Toolbar of Code Viewer -->
+                <div class="h-12 border-b border-gray-800 bg-[#161b22] flex items-center justify-between px-4">
+                    <div class="flex items-center gap-2 text-sm text-gray-300 font-medium" id="codeViewerTitle">
+                        <span class="material-symbols-rounded text-gray-500 text-[18px]">code</span> Chọn một file để xem
+                    </div>
+                    <!-- Nút nhờ AI giải thích file -->
+                    <button id="btnExplainFile" class="hidden items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white text-[13px] font-medium rounded-lg transition-all shadow-sm">
+                        <span class="material-symbols-rounded text-[16px]">auto_awesome</span> Giải thích file này
+                    </button>
+                </div>
+                
+                <!-- Code Area -->
+                <div class="flex-1 overflow-auto p-4 relative" id="codeViewerContent">
+                    <div class="flex flex-col items-center justify-center h-full text-gray-600">
+                        <span class="material-symbols-rounded text-6xl mb-4 opacity-20">data_object</span>
+                        <p class="text-sm">Mã nguồn sẽ hiển thị tại đây</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- ============================================== -->
+
+    <!-- ============================================== -->
+    <!-- CỬA SỔ GIA SƯ TỪNG BƯỚC (TUTOR MODAL)          -->
+    <!-- ============================================== -->
+    <div id="tutorModal" class="slide-up-modal fixed inset-0 z-[2000] bg-white hidden flex-col transform translate-y-full">
         <div class="h-16 border-b border-gray-200 flex items-center justify-between px-4 md:px-6 bg-surface-light flex-shrink-0 shadow-sm z-10">
             <div class="flex items-center gap-4">
                 <div class="bg-primary/10 text-primary p-2 rounded-xl">
@@ -297,16 +374,9 @@
             </button>
         </div>
 
-        <!-- Body: Split Screen -->
         <div class="flex-1 flex flex-col md:flex-row overflow-hidden bg-gray-50">
-            
-            <!-- Left Panel: Nội dung Bước -->
             <div class="w-full md:w-3/5 lg:w-2/3 h-[55%] md:h-full flex flex-col bg-white border-b md:border-b-0 md:border-r border-gray-200 relative shadow-[2px_0_10px_rgba(0,0,0,0.02)] z-10">
-                <div class="flex-1 overflow-y-auto p-6 md:p-10 markdown-body" id="tutorStepContent">
-                    <!-- Markdown content will be rendered here -->
-                </div>
-                
-                <!-- Controls: Chuyển bước -->
+                <div class="flex-1 overflow-y-auto p-6 md:p-10 markdown-body" id="tutorStepContent"></div>
                 <div class="p-4 border-t border-gray-100 bg-white flex items-center justify-between flex-shrink-0">
                     <button id="btnTutorPrev" class="px-4 py-2.5 text-sm font-medium text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span class="material-symbols-rounded text-[18px]">arrow_back</span> <span class="hidden sm:inline">Trở lại</span>
@@ -322,22 +392,12 @@
                 </div>
             </div>
 
-            <!-- Right Panel: Box Chat riêng cho bước hiện tại -->
             <div class="w-full md:w-2/5 lg:w-1/3 h-[45%] md:h-full flex flex-col bg-[#f8fafc]">
                 <div class="p-3.5 border-b border-gray-200 bg-white flex items-center gap-2 flex-shrink-0 shadow-sm z-10">
                     <span class="material-symbols-rounded text-purple-500 text-lg">forum</span>
-                    <h3 class="text-sm font-medium text-gray-700">Thảo luận & Hỏi đáp về Bước này</h3>
+                    <h3 class="text-sm font-medium text-gray-700">Thảo luận & Hỏi đáp</h3>
                 </div>
-                
-                <!-- Chat History of current step -->
-                <div id="tutorChatHistory" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
-                    <div class="text-center text-xs text-gray-400 my-auto bg-white p-4 rounded-2xl border border-dashed border-gray-200 mx-4">
-                        <span class="material-symbols-rounded text-gray-300 text-3xl mb-2 block">live_help</span>
-                        Nếu không hiểu code hoặc gặp lỗi ở bước này, hãy hỏi AI tại đây!<br>Lịch sử này không làm ảnh hưởng bài học chính.
-                    </div>
-                </div>
-                
-                <!-- Chat Input -->
+                <div id="tutorChatHistory" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3"></div>
                 <div class="p-4 bg-white border-t border-gray-200 flex-shrink-0">
                     <div class="relative flex items-end bg-gray-50 border border-gray-300 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-primary/50 focus-within:border-primary transition-all">
                         <textarea id="tutorChatInput" rows="2" class="w-full bg-transparent border-none focus:ring-0 resize-none text-sm p-3 max-h-32" placeholder="Hỏi AI hoặc dán mã lỗi vào đây..."></textarea>
@@ -383,9 +443,7 @@
                 <h3 class="font-display text-2xl font-medium text-gray-800 mb-2">Đồng bộ Đám mây</h3>
                 <p class="text-gray-500 text-sm">Đăng nhập để tự động lưu và đồng bộ lịch sử học tập của bạn qua Firestore.</p>
             </div>
-            
             <div id="authError" class="hidden bg-red-50 text-red-600 text-sm p-3 rounded-xl mb-4 border border-red-100 font-medium text-center"></div>
-            
             <div class="space-y-4 mb-8">
                 <div>
                     <label class="block text-xs font-medium text-gray-600 mb-1 ml-1">Email</label>
@@ -396,7 +454,6 @@
                     <input type="password" id="authPassword" class="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-all text-sm" placeholder="Ít nhất 6 ký tự">
                 </div>
             </div>
-            
             <div class="flex gap-3">
                 <button onclick="registerUser()" class="flex-1 py-3 text-sm font-medium text-primary bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors border border-blue-100">Tạo tài khoản</button>
                 <button onclick="loginUser()" class="flex-1 py-3 text-sm font-medium text-white bg-primary hover:bg-primary-hover rounded-xl transition-colors shadow-md hover:shadow-lg">Đăng nhập</button>
@@ -404,7 +461,7 @@
         </div>
     </div>
 
-    <!-- LOGIC JS (Giữ nguyên 100% Core Logic cũ + Bổ sung logic Window Gia Sư) -->
+    <!-- LOGIC JS -->
     <script type="module">
         if (typeof AbortSignal !== 'undefined' && !AbortSignal.any) {
             AbortSignal.any = function(signals) {
@@ -444,13 +501,14 @@
         const buttonSpinner = document.getElementById('buttonSpinner');
         const statusMessage = document.getElementById('statusMessage');
 
-        // Biến hệ thống
         let currentRepoId = null; 
         let sessionHistory = []; 
         let currentRepoIndex = ""; 
         let activeTemplateType = "custom"; 
 
-        // BIẾN CHO TÍNH NĂNG GIA SƯ TỪNG BƯỚC
+        // Biến lưu Repo Path cho File Explorer
+        let currentGithubRepoPath = ""; // Ví dụ: "facebook/react"
+
         let tutorSteps = [];
         let currentTutorStepIndex = 0;
 
@@ -462,6 +520,7 @@
 
         const mainContentElement = document.getElementById('main-content');
         const scrollToTopBtn = document.getElementById('scrollToTopBtn');
+        const btnOpenExplorer = document.getElementById('btnOpenExplorer');
 
         mainContentElement.addEventListener('scroll', () => {
             if (mainContentElement.scrollTop > 300) {
@@ -478,46 +537,37 @@
         window.clearRepoIndex = function() {
             currentRepoId = null;
             currentRepoIndex = "";
+            currentGithubRepoPath = "";
             sessionHistory = [];
             document.getElementById('repoContextBadge').classList.add('hidden');
             quickActions.classList.add('hidden');
+            btnOpenExplorer.classList.add('hidden'); // Ẩn nút Explorer
+            btnOpenExplorer.classList.remove('flex');
             chatHistoryContainer.innerHTML = '';
             emptyStateContainer.classList.remove('hidden'); 
             updateStatus('text-blue-600', "Đã tạo phiên học mới.");
         };
 
-        // --- LOGIC AUTH ---
+        // --- LOGIC AUTH VÀ LƯU TRỮ (Giữ nguyên) ---
         const authModal = document.getElementById('authModal');
-        const authEmail = document.getElementById('authEmail');
-        const authPassword = document.getElementById('authPassword');
         const authError = document.getElementById('authError');
-        const userInfoDisplay = document.getElementById('userInfoDisplay');
-        const userEmailSpan = document.getElementById('userEmail');
-        const userAvatar = document.getElementById('userAvatar');
-
-        function showAuthError(msg) {
-            authError.textContent = msg;
-            authError.classList.remove('hidden');
-        }
+        
+        function showAuthError(msg) { authError.textContent = msg; authError.classList.remove('hidden'); }
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
                 authModal.classList.remove('show');
-                userInfoDisplay.classList.remove('hidden');
-                userAvatar.classList.remove('hidden');
-                userEmailSpan.textContent = user.email;
-                userAvatar.textContent = user.email.charAt(0).toUpperCase();
+                document.getElementById('userInfoDisplay').classList.remove('hidden');
+                document.getElementById('userAvatar').classList.remove('hidden');
+                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('userAvatar').textContent = user.email.charAt(0).toUpperCase();
                 updateStatus('text-blue-600', "Đã kết nối đám mây. Đang tải dữ liệu...");
                 loadHistory(); 
             } else {
                 authModal.classList.add('show');
-                userInfoDisplay.classList.add('hidden');
-                userAvatar.classList.add('hidden');
-                historyList.innerHTML = `
-                    <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                        <span class="material-symbols-rounded text-gray-300 text-3xl mb-2">lock</span>
-                        <p class="text-xs text-gray-400">Vui lòng đăng nhập để xem.</p>
-                    </div>`;
+                document.getElementById('userInfoDisplay').classList.add('hidden');
+                document.getElementById('userAvatar').classList.add('hidden');
+                historyList.innerHTML = `<div class="text-center py-6"><span class="material-symbols-rounded text-gray-300 text-3xl mb-2">lock</span><p class="text-xs text-gray-400">Vui lòng đăng nhập.</p></div>`;
                 clearRepoIndex(); 
             }
         });
@@ -525,59 +575,37 @@
         window.loginUser = async function() {
             try {
                 showAuthError("Đang đăng nhập...");
-                authError.classList.replace('bg-red-50', 'bg-blue-50');
-                authError.classList.replace('text-red-600', 'text-blue-600');
-                await signInWithEmailAndPassword(auth, authEmail.value, authPassword.value);
-            } catch (error) {
-                authError.classList.replace('bg-blue-50', 'bg-red-50');
-                authError.classList.replace('text-blue-600', 'text-red-600');
-                showAuthError("Lỗi đăng nhập: " + error.message);
-            }
+                await signInWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+            } catch (error) { showAuthError("Lỗi đăng nhập: " + error.message); }
         };
 
         window.registerUser = async function() {
             try {
                 showAuthError("Đang tạo tài khoản...");
-                authError.classList.replace('bg-red-50', 'bg-blue-50');
-                authError.classList.replace('text-red-600', 'text-blue-600');
-                await createUserWithEmailAndPassword(auth, authEmail.value, authPassword.value);
-            } catch (error) {
-                authError.classList.replace('bg-blue-50', 'bg-red-50');
-                authError.classList.replace('text-blue-600', 'text-red-600');
-                showAuthError("Lỗi đăng ký: " + error.message);
-            }
+                await createUserWithEmailAndPassword(auth, document.getElementById('authEmail').value, document.getElementById('authPassword').value);
+            } catch (error) { showAuthError("Lỗi đăng ký: " + error.message); }
         };
 
-        window.logoutUser = async function() {
-            await signOut(auth);
-        };
+        window.logoutUser = async function() { await signOut(auth); };
 
-        // --- LOGIC CUSTOM MODAL ---
-        window.closeModal = function(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
+        window.closeModal = function(modalId) { document.getElementById(modalId).classList.remove('show'); }
 
         function showCustomConfirm(message, onConfirm) {
             document.getElementById('confirmMessage').innerText = message;
-            const overlay = document.getElementById('confirmModal');
-            const yesBtn = document.getElementById('confirmYesBtn');
-            overlay.classList.add('show');
-            yesBtn.onclick = function() { closeModal('confirmModal'); onConfirm(); };
+            document.getElementById('confirmModal').classList.add('show');
+            document.getElementById('confirmYesBtn').onclick = function() { closeModal('confirmModal'); onConfirm(); };
         }
 
         function showCustomPrompt(title, defaultVal, onConfirm) {
             document.getElementById('promptTitle').innerText = title;
             const inputField = document.getElementById('promptInputVal');
-            const overlay = document.getElementById('promptModal');
-            const yesBtn = document.getElementById('promptYesBtn');
             inputField.value = defaultVal;
-            overlay.classList.add('show');
+            document.getElementById('promptModal').classList.add('show');
             inputField.focus();
-            yesBtn.onclick = function() { closeModal('promptModal'); onConfirm(inputField.value); };
-            inputField.onkeydown = function(e) { if (e.key === 'Enter') yesBtn.click(); }
+            document.getElementById('promptYesBtn').onclick = function() { closeModal('promptModal'); onConfirm(inputField.value); };
+            inputField.onkeydown = function(e) { if (e.key === 'Enter') document.getElementById('promptYesBtn').click(); }
         }
 
-        // --- LOGIC LƯU TRỮ FIRESTORE ---
         let currentUserRepos = [];
 
         async function loadHistory() {
@@ -589,18 +617,13 @@
                 historyList.innerHTML = "";
                 
                 if (querySnapshot.empty) {
-                    historyList.innerHTML = `
-                        <div class="text-center py-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
-                            <span class="material-symbols-rounded text-gray-300 text-3xl mb-2">folder_off</span>
-                            <p class="text-xs text-gray-400">Chưa có dự án nào.</p>
-                        </div>`;
+                    historyList.innerHTML = `<div class="text-center py-6"><p class="text-xs text-gray-400">Chưa có dự án nào.</p></div>`;
                     return;
                 }
                 
                 querySnapshot.forEach(docSnap => {
                     const repo = { id: docSnap.id, ...docSnap.data() };
                     currentUserRepos.push(repo);
-                    
                     const dateStr = new Date(repo.updatedAt).toLocaleString('vi-VN', {hour: '2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
                     const item = document.createElement('div');
                     item.className = 'group flex items-center justify-between p-3 rounded-xl border border-transparent bg-gray-50 hover:bg-blue-50 hover:border-blue-100 cursor-pointer transition-all mb-2';
@@ -615,10 +638,7 @@
                     `;
                     historyList.appendChild(item);
                 });
-            } catch (error) {
-                console.error("Lỗi tải Firestore:", error);
-                updateStatus('text-red-600', "Lỗi tải dữ liệu. Kiểm tra Rules.");
-            }
+            } catch (error) { updateStatus('text-red-600', "Lỗi tải dữ liệu. Kiểm tra Rules."); }
         }
 
         window.viewRepo = function(id) {
@@ -628,41 +648,50 @@
                 currentRepoIndex = repo.repoIndex || "";
                 sessionHistory = repo.history || [];
                 
+                // Khôi phục Github Path nếu có
+                currentGithubRepoPath = repo.githubPath || "";
+                
                 renderChatHistory(); 
                 
                 if (currentRepoIndex !== "") {
                     document.getElementById('repoContextBadge').classList.remove('hidden');
                 }
+                if (currentGithubRepoPath !== "") {
+                    btnOpenExplorer.classList.remove('hidden');
+                    btnOpenExplorer.classList.add('flex');
+                    document.getElementById('repoContextSubtext').innerText = currentGithubRepoPath;
+                }
+                
                 quickActions.classList.remove('hidden');
                 updateStatus('text-blue-600', `Đang học dự án: ${repo.title}`);
                 
-                if(window.innerWidth <= 768 && document.getElementById('sidebar').classList.contains('open')) {
-                    toggleSidebar();
-                }
+                if(window.innerWidth <= 768 && document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
             }
         };
 
         window.deleteRepo = function(id, event) {
             event.stopPropagation();
-            showCustomConfirm("Xóa toàn bộ tiến trình học của dự án này trên đám mây?", async () => {
-                try {
-                    await deleteDoc(doc(db, `users/${auth.currentUser.uid}/repos`, id));
-                    if (currentRepoId === id) clearRepoIndex(); 
-                    loadHistory();
-                    updateStatus('text-green-600', "Đã xóa dự án trên đám mây.");
-                } catch (error) {
-                    alert("Lỗi khi xóa: " + error.message);
-                }
+            showCustomConfirm("Xóa dự án này trên đám mây?", async () => {
+                await deleteDoc(doc(db, `users/${auth.currentUser.uid}/repos`, id));
+                if (currentRepoId === id) clearRepoIndex(); 
+                loadHistory();
             });
         };
 
-        function extractDefaultTitle(promptText) {
+        function extractRepoFromPrompt(promptText) {
             const githubRegex = /github\.com\/([^/\s]+\/[^/\s]+)/i;
             const match = promptText.match(githubRegex);
             if (match && match[1]) {
-                let repoName = match[1].replace('.git', '');
-                return "Repo: " + repoName;
+                // Loại bỏ phần đuôi .git nếu có
+                return match[1].replace('.git', '');
             }
+            return "";
+        }
+
+        function extractDefaultTitle(promptText) {
+            const path = extractRepoFromPrompt(promptText);
+            if (path) return "Repo: " + path;
+            
             const lines = promptText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
             const lastLine = lines[lines.length - 1];
             if (lastLine && !lastLine.includes("DÁN LINK") && !lastLine.includes("Hãy đóng vai")) {
@@ -682,14 +711,21 @@
                     const newRepoRef = doc(reposRef);
                     currentRepoId = newRepoRef.id; 
                     await setDoc(newRepoRef, {
-                        title: title, repoIndex: currentRepoIndex, history: sessionHistory, updatedAt: new Date().getTime()
+                        title: title, 
+                        repoIndex: currentRepoIndex, 
+                        githubPath: currentGithubRepoPath, // Lưu lại path Github
+                        history: sessionHistory, 
+                        updatedAt: new Date().getTime()
                     });
                     loadHistory();
                 });
             } else {
                 const repoRef = doc(db, `users/${auth.currentUser.uid}/repos`, currentRepoId);
                 await setDoc(repoRef, {
-                    repoIndex: currentRepoIndex, history: sessionHistory, updatedAt: new Date().getTime()
+                    repoIndex: currentRepoIndex, 
+                    githubPath: currentGithubRepoPath,
+                    history: sessionHistory, 
+                    updatedAt: new Date().getTime()
                 }, { merge: true }); 
                 loadHistory();
             }
@@ -717,70 +753,47 @@
 
             if (isNewMessage) {
                 const lastBlock = chatHistoryContainer.lastElementChild;
-                if (lastBlock) {
-                    setTimeout(() => {
-                        lastBlock.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    }, 50); 
-                }
+                if (lastBlock) setTimeout(() => lastBlock.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50); 
             } else {
                 mainContentElement.scrollTop = mainContentElement.scrollHeight;
             }
         }
 
-        // --- QUICK ACTIONS CHÍNH ---
         document.getElementById('btnGotBug').addEventListener('click', () => {
             promptInput.value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n[DÁN MÃ LỖI VÀO ĐÂY]";
             promptInput.focus();
-            if(window.innerWidth <= 768 && !document.getElementById('sidebar').classList.contains('open')) {
-                toggleSidebar();
-            }
+            if(window.innerWidth <= 768 && !document.getElementById('sidebar').classList.contains('open')) toggleSidebar();
         });
 
-        // --- CHỨC NĂNG COPY CODE ---
+        // --- COPY CODE ---
         document.addEventListener('click', function(e) {
             const copyBtn = e.target.closest('.copy-btn');
             if (!copyBtn) return;
-
             const codeToCopy = decodeURIComponent(copyBtn.getAttribute('data-code'));
             const textArea = document.createElement("textarea");
             textArea.value = codeToCopy;
-            textArea.style.top = "0";
-            textArea.style.left = "0";
-            textArea.style.position = "fixed";
+            textArea.style.top = "0"; textArea.style.left = "0"; textArea.style.position = "fixed";
             document.body.appendChild(textArea);
-            textArea.focus();
-            textArea.select();
-
+            textArea.focus(); textArea.select();
             try {
-                const successful = document.execCommand('copy');
-                if (successful) {
+                if (document.execCommand('copy')) {
                     const icon = copyBtn.querySelector('.material-symbols-rounded');
                     const text = copyBtn.querySelector('.copy-text');
-                    const originalIcon = icon.innerText;
-                    const originalText = text.innerText;
-                    
-                    icon.innerText = 'check';
-                    icon.classList.add('text-green-500');
-                    text.innerText = 'Đã chép!';
-                    text.classList.add('text-green-500');
-                    
+                    const originalIcon = icon.innerText, originalText = text.innerText;
+                    icon.innerText = 'check'; icon.classList.add('text-green-500');
+                    text.innerText = 'Đã chép!'; text.classList.add('text-green-500');
                     setTimeout(() => {
-                        icon.innerText = originalIcon;
-                        icon.classList.remove('text-green-500');
-                        text.innerText = originalText;
-                        text.classList.remove('text-green-500');
+                        icon.innerText = originalIcon; icon.classList.remove('text-green-500');
+                        text.innerText = originalText; text.classList.remove('text-green-500');
                     }, 2000);
                 }
-            } catch (err) {
-                console.error('Lỗi khi copy', err);
-            }
+            } catch (err) { console.error('Lỗi copy', err); }
             document.body.removeChild(textArea);
         });
 
         const menuToggle = document.getElementById('menuToggle');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
-
         function toggleSidebar() {
             sidebar.classList.toggle('open');
             if(sidebar.classList.contains('open')) {
@@ -799,27 +812,19 @@
             statusMessage.innerHTML = message; 
         }
 
-        updateStatus('text-blue-600', "Firebase App khởi tạo.<br>Đang chờ mô hình AI...");
-
         const renderer = new marked.Renderer();
         renderer.code = function(codeOrToken, language) {
-            let code = codeOrToken;
-            let lang = language;
-            if (typeof codeOrToken === 'object') {
-                code = codeOrToken.text;
-                lang = codeOrToken.lang;
-            }
+            let code = codeOrToken, lang = language;
+            if (typeof codeOrToken === 'object') { code = codeOrToken.text; lang = codeOrToken.lang; }
             const validLang = (lang && hljs.getLanguage(lang)) ? lang : 'plaintext';
             const highlighted = validLang === 'plaintext' ? hljs.highlightAuto(code).value : hljs.highlight(code, { language: validLang }).value;
             const encodedCode = encodeURIComponent(code); 
-
             return `
-            <div class="code-block-wrapper rounded-xl overflow-hidden bg-[#0d1117] border border-gray-700 my-5 shadow-md">
+            <div class="code-block-wrapper rounded-xl overflow-hidden bg-[#0d1117] border border-gray-700 my-5 shadow-md text-left">
                 <div class="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-gray-700">
                     <span class="text-[11px] font-medium text-gray-400 uppercase tracking-wider">${validLang}</span>
                     <button class="copy-btn flex items-center gap-1.5 text-[12px] text-gray-400 hover:text-white transition-colors focus:outline-none" data-code="${encodedCode}">
-                        <span class="material-symbols-rounded text-[16px]">content_copy</span> 
-                        <span class="copy-text">Sao chép</span>
+                        <span class="material-symbols-rounded text-[16px]">content_copy</span> <span class="copy-text">Sao chép</span>
                     </button>
                 </div>
                 <div class="p-4 overflow-x-auto text-[14px]">
@@ -829,41 +834,158 @@
         };
         marked.use({ renderer });
 
-        const systemPrompt = `You are an AI Technical Tutor.
+        // --- GITHUB EXPLORER LOGIC (NEW FEATURE) ---
+        let currentViewingFileName = "";
+        let currentViewingFileContent = "";
 
-Your task is to turn any GitHub repository into a complete, beginner-friendly tutorial.
+        window.openExplorerModal = function() {
+            if (!currentGithubRepoPath) { alert("Không tìm thấy thông tin repository."); return; }
+            const modal = document.getElementById('explorerModal');
+            document.getElementById('explorerRepoName').innerText = currentGithubRepoPath;
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
+            
+            // Load root directory
+            fetchGitHubContents("");
+        };
 
-Assume the user is a beginner developer.
-Never skip steps.
-Never assume prior knowledge.
+        window.closeExplorerModal = function() {
+            const modal = document.getElementById('explorerModal');
+            modal.classList.add('translate-y-full');
+            setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 300);
+        };
 
-For every repository, always follow this structure:
-1. Explain what problem this repository solves.
-2. Explain the big picture architecture.
-3. Show the file structure and which file to start with.
-4. Explain the execution flow from input to output.
-5. Give step-by-step terminal commands to run locally.
-6. Explain each command and what it does.
-7. Explain how to modify or extend the project.
-8. Explain how to deploy (if applicable).
+        async function fetchGitHubContents(path, parentElement = document.getElementById('fileTreeContainer')) {
+            try {
+                if(path === "") parentElement.innerHTML = `<div class="flex justify-center mt-10 text-gray-400"><div class="spinner !border-gray-300 !border-l-primary"></div></div>`;
+                
+                const response = await fetch(`https://api.github.com/repos/${currentGithubRepoPath}/contents/${path}`);
+                if (!response.ok) throw new Error("API rate limit hoặc repo private.");
+                
+                const data = await response.json();
+                
+                // Sort: Folders first, then files
+                data.sort((a, b) => {
+                    if (a.type === b.type) return a.name.localeCompare(b.name);
+                    return a.type === "dir" ? -1 : 1;
+                });
 
-Rules:
-- Use simple language.
-- Explain before showing code.
-- When showing code, explain what each part does.
-- Never say "just run this".
-- Teach like a real instructor, not like a chatbot.`;
-
-        let model;
-        try {
-            const ai = getAI(app, { backend: new GoogleAIBackend() });
-            model = getGenerativeModel(ai, { model: "gemini-2.5-flash", systemInstruction: systemPrompt });
-            updateStatus('text-green-600', "AI Tutor đã sẵn sàng.");
-        } catch (e) {
-            updateStatus('text-red-600', `Lỗi AI: ${e.message}`);
+                let html = "";
+                data.forEach(item => {
+                    if (item.type === "dir") {
+                        html += `
+                        <div>
+                            <div class="tree-item" onclick="toggleFolder(this, '${item.path}')">
+                                <span class="material-symbols-rounded tree-icon text-blue-400">folder</span>
+                                <span>${item.name}</span>
+                            </div>
+                            <div class="tree-children" id="folder-${btoa(item.path).replace(/=/g, '')}"></div>
+                        </div>`;
+                    } else if (item.type === "file") {
+                        // Skip some binary files visually if needed, but for now show all
+                        html += `
+                        <div class="tree-item" onclick="viewGitHubFile(this, '${item.path}', '${item.download_url}')">
+                            <span class="material-symbols-rounded tree-icon text-gray-400">description</span>
+                            <span class="truncate">${item.name}</span>
+                        </div>`;
+                    }
+                });
+                parentElement.innerHTML = html;
+            } catch (error) {
+                parentElement.innerHTML = `<div class="p-3 text-red-500 text-sm">Lỗi tải dữ liệu. Cấu trúc repo có thể quá lớn hoặc bị giới hạn API.</div>`;
+            }
         }
 
-        // --- CÁC HÀM XỬ LÝ GIA SƯ TỪNG BƯỚC (NEW) ---
+        window.toggleFolder = function(element, path) {
+            const childrenContainer = document.getElementById(`folder-${btoa(path).replace(/=/g, '')}`);
+            if (childrenContainer.classList.contains('open')) {
+                childrenContainer.classList.remove('open');
+                element.querySelector('.tree-icon').innerText = 'folder';
+            } else {
+                childrenContainer.classList.add('open');
+                element.querySelector('.tree-icon').innerText = 'folder_open';
+                if (childrenContainer.innerHTML === "") {
+                    childrenContainer.innerHTML = `<div class="text-xs text-gray-400 my-2 ml-2">Đang tải...</div>`;
+                    fetchGitHubContents(path, childrenContainer);
+                }
+            }
+        };
+
+        window.viewGitHubFile = async function(element, path, downloadUrl) {
+            // Highlight selection
+            document.querySelectorAll('.tree-item').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+
+            const contentContainer = document.getElementById('codeViewerContent');
+            const titleContainer = document.getElementById('codeViewerTitle');
+            const btnExplain = document.getElementById('btnExplainFile');
+            
+            const fileName = path.split('/').pop();
+            titleContainer.innerHTML = `<span class="material-symbols-rounded text-gray-500 text-[18px]">description</span> ${path}`;
+            btnExplain.classList.add('hidden'); // Ẩn nút giải thích khi đang tải
+            
+            contentContainer.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-gray-500">
+                    <div class="spinner mb-4 !border-gray-600 !border-l-white"></div>
+                    <p class="text-sm">Đang tải nội dung file...</p>
+                </div>
+            `;
+
+            try {
+                const response = await fetch(downloadUrl);
+                if (!response.ok) throw new Error("Không thể đọc file");
+                const text = await response.text();
+                
+                // Giới hạn file quá lớn
+                if (text.length > 100000) {
+                    contentContainer.innerHTML = `<div class="text-red-400 p-4">File quá lớn để hiển thị hoặc định dạng không hỗ trợ.</div>`;
+                    return;
+                }
+
+                currentViewingFileName = fileName;
+                currentViewingFileContent = text;
+
+                // Determine language based on extension
+                const ext = fileName.split('.').pop();
+                let validLang = hljs.getLanguage(ext) ? ext : 'plaintext';
+                // Một số đuôi file thông dụng
+                if(['js', 'jsx'].includes(ext)) validLang = 'javascript';
+                if(['ts', 'tsx'].includes(ext)) validLang = 'typescript';
+                if(ext === 'py') validLang = 'python';
+                if(ext === 'html') validLang = 'xml';
+
+                const highlighted = validLang === 'plaintext' ? hljs.highlightAuto(text).value : hljs.highlight(text, { language: validLang }).value;
+
+                contentContainer.innerHTML = `
+                    <pre class="!m-0 !bg-transparent !p-0"><code class="hljs language-${validLang} !text-[#e6edf3] !bg-transparent">${highlighted}</code></pre>
+                `;
+                
+                // Hiển thị nút nhờ AI giải thích
+                btnExplain.classList.remove('hidden');
+                btnExplain.classList.add('flex');
+            } catch (error) {
+                contentContainer.innerHTML = `<div class="text-red-400 p-4">Lỗi tải nội dung: File có thể là định dạng ảnh hoặc nhị phân.</div>`;
+            }
+        };
+
+        // Gắn sự kiện cho nút "Nhờ AI giải thích"
+        document.getElementById('btnExplainFile').addEventListener('click', () => {
+            if(!currentViewingFileName || !currentViewingFileContent) return;
+            
+            // Xây dựng prompt
+            const promptText = `Hệ thống vừa trích xuất mã nguồn của file \`${currentViewingFileName}\` trong dự án.\n\nHãy giải thích chi tiết chức năng, luồng hoạt động của file này.\n\n[MÃ NGUỒN FILE]:\n\`\`\`\n${currentViewingFileContent}\n\`\`\``;
+            
+            // Đóng Explorer
+            closeExplorerModal();
+            
+            // Đưa vào chat chính và gửi đi
+            promptInput.value = promptText;
+            updateStatus('text-blue-600', "Đang gửi file cho AI...");
+            setTimeout(() => sendPromptButton.click(), 300); // Đợi xíu cho modal đóng mượt
+        });
+
+        // --- CÁC HÀM XỬ LÝ GIA SƯ TỪNG BƯỚC (TUTOR) ---
         function parseTutorSteps(text) {
             const steps = [];
             const blocks = text.split('===STEP_START===');
@@ -871,18 +993,11 @@ Rules:
                 const block = blocks[i];
                 const endIdx = block.indexOf('===STEP_END===');
                 let contentStr = endIdx !== -1 ? block.substring(0, endIdx).trim() : block.trim();
-                
                 let title = `Bước ${i}`;
                 const titleMatch = contentStr.match(/TIÊU ĐỀ:\s*(.*)/);
-                if (titleMatch) {
-                    title = titleMatch[1].trim();
-                    contentStr = contentStr.replace(titleMatch[0], '').trim();
-                }
-                
+                if (titleMatch) { title = titleMatch[1].trim(); contentStr = contentStr.replace(titleMatch[0], '').trim(); }
                 const contentMatch = contentStr.match(/NỘI DUNG:\s*([\s\S]*)/);
-                if (contentMatch) {
-                    contentStr = contentMatch[1].trim();
-                }
+                if (contentMatch) { contentStr = contentMatch[1].trim(); }
                 steps.push({ title, content: contentStr });
             }
             return steps;
@@ -896,8 +1011,7 @@ Rules:
 
         function openTutorModal() {
             const modal = document.getElementById('tutorModal');
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
+            modal.classList.remove('hidden'); modal.classList.add('flex');
             setTimeout(() => { modal.classList.remove('translate-y-full'); }, 10);
             renderTutorStep();
         }
@@ -908,68 +1022,39 @@ Rules:
             document.getElementById('tutorModalProgress').innerText = `Bước ${currentTutorStepIndex + 1} / ${tutorSteps.length}`;
             document.getElementById('tutorStepContent').innerHTML = marked.parse(step.content);
             document.getElementById('tutorStepContent').scrollTop = 0;
-            
             document.getElementById('btnTutorPrev').disabled = (currentTutorStepIndex === 0);
-            
             const nextBtn = document.getElementById('btnTutorNext');
             if (currentTutorStepIndex === tutorSteps.length - 1) {
                 nextBtn.innerHTML = 'Hoàn thành <span class="material-symbols-rounded text-[18px]">done_all</span>';
-            } else {
-                nextBtn.innerHTML = 'Tiếp theo <span class="material-symbols-rounded text-[18px]">arrow_forward</span>';
-            }
+            } else { nextBtn.innerHTML = 'Tiếp theo <span class="material-symbols-rounded text-[18px]">arrow_forward</span>'; }
             
-            // Xóa lịch sử box chat nhỏ để trò chuyện nội bộ cho bước mới
-            document.getElementById('tutorChatHistory').innerHTML = `
-                <div class="text-center text-xs text-gray-400 my-auto bg-white p-4 rounded-2xl border border-dashed border-gray-200 mx-4">
-                    <span class="material-symbols-rounded text-gray-300 text-3xl mb-2 block">live_help</span>
-                    Nếu không hiểu code hoặc gặp lỗi ở bước này, hãy hỏi AI tại đây!<br>Lịch sử này không làm ảnh hưởng bài học chính.
-                </div>
-            `;
+            document.getElementById('tutorChatHistory').innerHTML = `<div class="text-center text-xs text-gray-400 my-auto bg-white p-4 rounded-2xl border border-dashed border-gray-200 mx-4"><span class="material-symbols-rounded text-gray-300 text-3xl mb-2 block">live_help</span>Nếu không hiểu code hoặc gặp lỗi ở bước này, hãy hỏi AI tại đây!</div>`;
             document.getElementById('tutorChatInput').value = '';
         }
 
-        document.getElementById('btnTutorPrev').addEventListener('click', () => {
-            if (currentTutorStepIndex > 0) { currentTutorStepIndex--; renderTutorStep(); }
-        });
-
+        document.getElementById('btnTutorPrev').addEventListener('click', () => { if (currentTutorStepIndex > 0) { currentTutorStepIndex--; renderTutorStep(); } });
         document.getElementById('btnTutorNext').addEventListener('click', () => {
-            if (currentTutorStepIndex < tutorSteps.length - 1) { 
-                currentTutorStepIndex++; 
-                renderTutorStep(); 
-            } else {
-                closeTutorModal();
-                updateStatus('text-green-600', 'Chúc mừng bạn đã hoàn thành giáo án!');
-            }
+            if (currentTutorStepIndex < tutorSteps.length - 1) { currentTutorStepIndex++; renderTutorStep(); } 
+            else { closeTutorModal(); updateStatus('text-green-600', 'Chúc mừng bạn đã hoàn thành giáo án!'); }
         });
-
         document.getElementById('btnTutorBug').addEventListener('click', () => {
-            const input = document.getElementById('tutorChatInput');
-            input.value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n";
-            input.focus();
+            document.getElementById('tutorChatInput').value = "Tôi gặp lỗi ở bước này. Lý do có thể là gì và làm sao để kiểm tra/khắc phục? Đây là mã lỗi tôi thấy:\n";
+            document.getElementById('tutorChatInput').focus();
         });
 
         document.getElementById('tutorChatSend').addEventListener('click', async () => {
             const input = document.getElementById('tutorChatInput');
             const userText = input.value.trim();
             if(!userText || !model) return;
-            
             const historyDiv = document.getElementById('tutorChatHistory');
-            // Remove placeholder if it exists
             if (historyDiv.innerHTML.includes('đặt câu hỏi về bước này')) historyDiv.innerHTML = '';
-            
-            // Append User Msg
             historyDiv.innerHTML += `<div class="bg-blue-100 text-blue-900 p-3 rounded-xl rounded-br-sm text-[13px] ml-auto max-w-[90%] mb-3 shadow-sm break-words whitespace-pre-wrap font-medium border border-blue-200">${userText}</div>`;
             input.value = '';
-            
-            // Loading Indicator
             const loadingId = 'loading-' + Date.now();
             historyDiv.innerHTML += `<div id="${loadingId}" class="bg-white border border-gray-200 text-gray-600 p-3 rounded-xl rounded-bl-sm text-[13px] mr-auto max-w-[85%] mb-3 flex items-center gap-2 shadow-sm"><div class="spinner !w-4 !h-4 !border-2 border-gray-300 border-l-primary"></div> Đang trả lời...</div>`;
             historyDiv.scrollTop = historyDiv.scrollHeight;
-            
-            // System Context for specific Step Chat
             const stepContent = tutorSteps[currentTutorStepIndex].content;
             const promptContext = `[NGỮ CẢNH DỰ ÁN]:\n${currentRepoIndex}\n\n[BƯỚC BẠN ĐANG HƯỚNG DẪN TÔI]:\n${stepContent}\n\n[CÂU HỎI CỦA TÔI]:\n${userText}\n\nLưu ý: Chỉ trả lời tập trung vào câu hỏi liên quan đến bước này, giải thích dễ hiểu cho newbie.`;
-            
             try {
                 const result = await model.generateContent(promptContext);
                 const text = result.response.text();
@@ -982,11 +1067,17 @@ Rules:
             }
         });
 
-        // ------------------------------------------
+        // --- GEMINI API CALL ---
+        const systemPrompt = `You are an AI Technical Tutor. Turn any GitHub repository into a beginner-friendly tutorial. Assume user is a beginner. Never skip steps. Explain before showing code.`;
+        let model;
+        try {
+            const ai = getAI(app, { backend: new GoogleAIBackend() });
+            model = getGenerativeModel(ai, { model: "gemini-2.5-flash", systemInstruction: systemPrompt });
+            updateStatus('text-green-600', "AI Tutor đã sẵn sàng.");
+        } catch (e) { updateStatus('text-red-600', `Lỗi AI: ${e.message}`); }
 
         const templates = {
             explain: "Hãy đóng vai một chuyên gia lập trình. Đọc repository dưới đây và tạo ra một bản tóm tắt kiến trúc dự án, luồng hoạt động chính và các file quan trọng. Giải thích cho tôi hiểu như một người mới bắt đầu.\n\n[DÁN LINK GITHUB HOẶC MÃ NGUỒN VÀO ĐÂY]",
-            // TEMPLATE "TUTOR" MỚI ĐƯỢC CHỈ ĐỊNH RÕ FORMAT ĐỂ PHÂN TÁCH BƯỚC
             tutor: "Hãy tạo một lộ trình giáo án thực hành dự án này. Chia thành các bước nhỏ (tối đa 10 bước). YÊU CẦU BẮT BUỘC: Trả về kết quả CHÍNH XÁC theo định dạng mẫu dưới đây để hệ thống tôi phân tách:\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 1]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 1]\n===STEP_END===\n\n===STEP_START===\nTIÊU ĐỀ: [Tên bước 2]\nNỘI DUNG:\n[Giải thích chi tiết và mã code của bước 2]\n===STEP_END===\n\n(Tiếp tục cho đến hết. Lưu ý: CHỈ trả về các khối STEP_START và STEP_END, không cần phần chào hỏi).",
             debug: "Tôi nhận được thông báo lỗi này trong quá trình làm. Hãy giải thích bằng ngôn ngữ đơn giản tại sao lại bị lỗi và cách khắc phục.\n[DÁN LOG LỖI VÀO ĐÂY]",
             customize: "Tôi muốn tùy chỉnh dự án này cho mục đích cá nhân của mình:\n[ĐIỀN MỤC TIÊU CỦA BẠN VÀO ĐÂY]\n\nHãy giải thích những gì tôi cần thay đổi trong mã nguồn.",
@@ -994,9 +1085,7 @@ Rules:
         };
 
         window.setTemplate = function(type) {
-            activeTemplateType = type; 
-            promptInput.value = templates[type];
-            promptInput.focus();
+            activeTemplateType = type; promptInput.value = templates[type]; promptInput.focus();
             if(window.innerWidth <= 768 && sidebar.classList.contains('open')) { /* toggleSidebar(); */ }
         };
 
@@ -1006,23 +1095,15 @@ Rules:
             if (!promptText) return updateStatus('text-red-600', "Vui lòng nhập lời nhắc!");
 
             updateStatus('text-blue-600', "Đang gửi yêu cầu...");
-            
-            quickActions.classList.add('hidden');
-            emptyStateContainer.classList.add('hidden');
-            loadingIndicator.classList.remove('hidden');
-
-            buttonText.textContent = 'Đang xử lý...';
-            buttonSpinner.classList.remove('hidden');
-            sendPromptButton.disabled = true;
+            quickActions.classList.add('hidden'); emptyStateContainer.classList.add('hidden'); loadingIndicator.classList.remove('hidden');
+            buttonText.textContent = 'Đang xử lý...'; buttonSpinner.classList.remove('hidden'); sendPromptButton.disabled = true;
 
             if(window.innerWidth <= 768 && sidebar.classList.contains('open')) toggleSidebar();
 
             let finalPrompt = promptText;
             if (currentRepoIndex !== "" && activeTemplateType !== 'explain') {
                 finalPrompt = `[NGỮ CẢNH DỰ ÁN TỪ PAGE INDEX ĐÃ LƯU]:\n${currentRepoIndex}\n\n`;
-                if (sessionHistory.length > 0) {
-                    finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${sessionHistory[sessionHistory.length - 1].response}\n\n`;
-                }
+                if (sessionHistory.length > 0) finalPrompt += `[BƯỚC BẠN VỪA HƯỚNG DẪN Ở TRƯỚC ĐÓ]:\n${sessionHistory[sessionHistory.length - 1].response}\n\n`;
                 finalPrompt += `---\n[YÊU CẦU MỚI CỦA TÔI]:\n${promptText}`;
             }
 
@@ -1030,62 +1111,47 @@ Rules:
                 const result = await model.generateContent(finalPrompt);
                 const text = result.response.text();
 
-                // ĐÁNH CHẶN LOGIC DÀNH CHO CỬA SỔ GIA SƯ (TUTOR MODE)
                 if (activeTemplateType === 'tutor') {
                     const parsedSteps = parseTutorSteps(text);
                     if (parsedSteps.length > 0) {
-                        tutorSteps = parsedSteps;
-                        currentTutorStepIndex = 0;
-                        
-                        // Ghi log vào màn hình chính để theo dõi lịch sử
-                        sessionHistory.push({ 
-                            prompt: "Yêu cầu AI lập giáo án hướng dẫn từng bước...", 
-                            response: `✅ **Đã tạo thành công lộ trình gồm ${tutorSteps.length} bước.**\n\nHệ thống đã mở cửa sổ Gia sư chuyên dụng để hướng dẫn bạn thực hành.` 
-                        });
-                        
+                        tutorSteps = parsedSteps; currentTutorStepIndex = 0;
+                        sessionHistory.push({ prompt: "Yêu cầu AI lập giáo án hướng dẫn từng bước...", response: `✅ **Đã tạo thành công lộ trình gồm ${tutorSteps.length} bước.**\n\nHệ thống đã mở cửa sổ Gia sư chuyên dụng để hướng dẫn bạn thực hành.` });
                         openTutorModal();
-                        
-                        loadingIndicator.classList.add('hidden');
-                        renderChatHistory(true);
-                        autoSaveRepo();
-                        updateStatus('text-green-600', "Đã tạo giáo án thực hành.");
-                        activeTemplateType = "custom";
-                        quickActions.classList.remove('hidden');
-                        
-                        // Reset button state
-                        buttonText.textContent = 'Gửi tới Gemini';
-                        buttonSpinner.classList.add('hidden');
-                        sendPromptButton.disabled = false;
-                        return; // THOÁT RA KHÔNG CHẠY CODE HIỂN THỊ CHAT BÌNH THƯỜNG BÊN DƯỚI NỮA
+                        loadingIndicator.classList.add('hidden'); renderChatHistory(true); autoSaveRepo(); updateStatus('text-green-600', "Đã tạo giáo án thực hành.");
+                        activeTemplateType = "custom"; quickActions.classList.remove('hidden');
+                        buttonText.textContent = 'Gửi tới Gemini'; buttonSpinner.classList.add('hidden'); sendPromptButton.disabled = false;
+                        return; 
                     }
                 }
 
-                // FLOW BÌNH THƯỜNG CHO CÁC LỆNH KHÁC
                 if (activeTemplateType === 'explain') {
                     currentRepoIndex = text;
                     document.getElementById('repoContextBadge').classList.remove('hidden');
+                    
+                    // Thử trích xuất Github Path
+                    const extractedPath = extractRepoFromPrompt(promptText);
+                    if (extractedPath) {
+                        currentGithubRepoPath = extractedPath;
+                        btnOpenExplorer.classList.remove('hidden');
+                        btnOpenExplorer.classList.add('flex');
+                        document.getElementById('repoContextSubtext').innerText = currentGithubRepoPath;
+                    }
                 }
 
                 sessionHistory.push({ prompt: promptText, response: text });
                 promptInput.value = "";
-
                 loadingIndicator.classList.add('hidden');
                 
                 renderChatHistory(true);
                 autoSaveRepo();
                 
                 updateStatus('text-green-600', activeTemplateType === 'explain' ? "📌 Đã tự động lưu dự án!" : "Đã lưu tiến trình.");
-                activeTemplateType = "custom";
-                quickActions.classList.remove('hidden');
+                activeTemplateType = "custom"; quickActions.classList.remove('hidden');
 
             } catch (error) {
-                loadingIndicator.classList.add('hidden');
-                updateStatus('text-red-600', `Lỗi: ${error.message}.`);
-                alert("Lỗi gọi API: " + error.message);
+                loadingIndicator.classList.add('hidden'); updateStatus('text-red-600', `Lỗi: ${error.message}.`); alert("Lỗi gọi API: " + error.message);
             } finally {
-                buttonText.textContent = 'Gửi tới Gemini';
-                buttonSpinner.classList.add('hidden');
-                sendPromptButton.disabled = false;
+                buttonText.textContent = 'Gửi tới Gemini'; buttonSpinner.classList.add('hidden'); sendPromptButton.disabled = false;
             }
         }
 
